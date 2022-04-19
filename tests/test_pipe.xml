@@ -1,0 +1,27 @@
+<main>
+    <repository name="fs1" folder="/home/ttrocha"/>
+
+    <preset target="psx" name="animation" domain="texturepack">
+        <tile-size width="32" height="32" keep-aspect="false"/>
+        <texture-size maxWidth="255" maxHeight="255" grow="vertical" allow-multiple="true"/>
+    </preset>
+
+    <pipeline pl-name="animation" target="psx">
+
+        <input>
+            <texturepack folder="animal" tp-name="animal-motion">
+                <section name="run"  input="@[fs1]/animal/run/run*.png"/>
+                <section name="walk" input="@[fs1]/animal/walk/walk*.png"/>
+
+                <target system="psx" preset="animations"/>
+            </texturepack>
+        </input>
+
+        <ic-indexed colors="15"/>
+        <ic-psx-tim vram-pos="320x0" clut-pos="0x490" />
+
+        <output file="@[fs1]/[target]/[folder]/[name]"/>
+
+    </pipeline>
+
+</main>

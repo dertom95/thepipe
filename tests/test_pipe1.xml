@@ -1,0 +1,32 @@
+<main>
+    <repositories>
+        <file-repository name="fs1" folder="/home/ttrocha/_dev/projects/python/thepipeline" />
+    </repositories>
+
+    <pipeline pl-name="animation" target="psx">
+        <init>
+            <eval>
+vx=320
+vy=0
+clutx=0
+cluty=490
+            </eval>
+
+            <input>
+                <file repository="fs1" filename="map2.png" />
+                <file repository="fs1" filename="map2_4.png" />
+            </input>
+        </init>
+
+        <ic-indexed colors="15" />
+        <ic-psx-tim vpos="@[vx]x@[vy]" cpos="@[clutx]x@[cluty]" bpp="4" />
+        <eval>
+vx+=64
+cluty+=1
+        </eval>
+
+        <output repository="fs1" filename="export/@[target]/converted-@[init-file-wo-ext].@[file-ext]" />
+
+    </pipeline>
+
+</main>
