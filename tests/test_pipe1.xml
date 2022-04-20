@@ -27,8 +27,8 @@
                 <file filename="humble://iconichomestead_pixelartasset/iconic_homestead v2.png"/>
             </input>
         </init>
-        <ic-indexed colors="4"/>
-        <ic-psx-tim vpos="@[vx]x@[vy]" cpos="@[clutx]x@[cluty]" bpp="4" />
+        <ic-indexed colors="6" dither="true"/>
+        <ic-psx-tim vpos="@[vx]x@[vy]" cpos="@[clutx]x@[cluty]" bpp="8" />
         <eval>
             vx+=64
             cluty+=1

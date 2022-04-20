@@ -12,6 +12,7 @@ XMLR=None
 HOST=None
 ARG_AUTOCOMPLETE_REPOSITORIES=False
 ARG_AUTOCOMPLETE_REPOSITORY_LEVELS=2
+ARG_GENERATE_XSD=False
 
 if platform == "linux" or platform == "linux2":
     HOST="linux"
@@ -201,7 +202,8 @@ class Converter:
         self.prefix = xgetrequired(xml,"prefix")
         self.name   = xgetrequired(xml,"name")
         self.target = xget(xml,"target","all")
-        XSDManager.get().add_target(self.target)        
+        if ARG_GENERATE_XSD:
+            XSDManager.get().add_target(self.target)        
         
         cmd = xml.find("%scommand"%XMLNS)
         if cmd is None:
@@ -212,7 +214,8 @@ class Converter:
         self.tool_out_ext = xget(cmd,"extension",None)
 
         self.params = xget_parameters(xml)
-        XSDManager.get().add_converter(self)
+        if ARG_GENERATE_XSD:
+            XSDManager.get().add_converter(self)
     
     def qualified_name(self):
         return "%s-%s" % (self.prefix,self.name)
@@ -233,7 +236,7 @@ class Converter:
             id,output,tool_type,type_signature,description=self.params[key]
             tool_type.reset()
 
-    def execute(self,temp_folder,in_file,xml_data,file_history,executions):
+    def execute(self,counter,temp_folder,in_file,xml_data,file_history,executions):
         self.reset_params()
         id,output,tool_type,type_signature,description=self.params["in"]
         tool_type.set(in_file)
@@ -244,7 +247,7 @@ class Converter:
         if self.tool_out_ext:
             file_extension=self.tool_out_ext
 
-        out_file = "%s%s-%s-%s.%s" %(temp_folder,time.time(),self.qualified_name(),filename_without_folder,file_extension)
+        out_file = "%s%s-%s-%s.%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name(),filename_without_folder,file_extension)
         
         id,output,tool_type,type_signature,description=self.params["out"]
         tool_type.set(out_file)
@@ -307,7 +310,8 @@ class Tool:
         self.version=xget(xml,"version","unknown")
         self.is_default=xget_b(xml,"default",False)
         self.target=xget(xml,"target","all")
-        XSDManager.get().add_target(self.target)
+        if ARG_GENERATE_XSD:
+            XSDManager.get().add_target(self.target)
 
         self.command=None
         for cmd in xml.iter("%scommand"%XMLNS):
@@ -459,12 +463,14 @@ class InputFile:
 
 class Context:
     def __init__(self,args):
-        global ARG_AUTOCOMPLETE_REPOSITORIES,ARG_AUTOCOMPLETE_REPOSITORY_LEVELS
+        global ARG_AUTOCOMPLETE_REPOSITORIES,ARG_AUTOCOMPLETE_REPOSITORY_LEVELS,ARG_GENERATE_XSD
 
         self.input_files = args.input
         self.keep_intermediate = args.keep_intermediate_files
         ARG_AUTOCOMPLETE_REPOSITORIES = args.autocomplete_repositories
         ARG_AUTOCOMPLETE_REPOSITORY_LEVELS = args.autocomplete_repository_levels
+        ARG_GENERATE_XSD = args.generate_xsd
+
         self.repositories={}
 
     def add_repository_from_xml(self,xml):
@@ -485,7 +491,7 @@ class Context:
                 filter_extension= xget(filter,"extension",None)
                 file_repo.add_filter(filter_folder,filter_filename,filter_extension)
 
-            if ARG_AUTOCOMPLETE_REPOSITORIES:
+            if ARG_AUTOCOMPLETE_REPOSITORIES and ARG_GENERATE_XSD:
                 files = file_repo.get_all_files()
                 XSDManager.get().add_files(files)
         
@@ -555,6 +561,7 @@ class Context:
         if xml_input is None:
             raise AttributeError("Pipeline.Init without <input/>\n%s" % ElementTree.tostring(xml_pipeline))
         
+        command_counter=1
         for _input in xml_input:
             repo_name,input_filename = self.retrieve_input(_input)
             shared_locals["repo_name"]=repo_name
@@ -589,7 +596,8 @@ class Context:
                 converter = Converter.get(tag)
                 if converter:
                     self.resolve_attribute_variables(command,shared_locals)
-                    result,input_filename,file_extension = converter.execute(pipeline_folder,input_filename,command,file_history,execution_calls)
+                    result,input_filename,file_extension = converter.execute(command_counter,pipeline_folder,input_filename,command,file_history,execution_calls)
+                    command_counter+=1
                     shared_locals["file-ext"]=file_extension
                     if result!=0:
                         raise AttributeError("command resulted in error!")
@@ -636,7 +644,7 @@ class Context:
             for repo in repos:
                 self.add_repository_from_xml(repo)
         default_repo=self.repositories["cwd"]=FileRepository("cwd",os.getcwd())
-        if ARG_AUTOCOMPLETE_REPOSITORIES:
+        if ARG_AUTOCOMPLETE_REPOSITORIES and ARG_GENERATE_XSD:
             files = default_repo.get_all_files()
             XSDManager.get().add_files(files)        
 
@@ -681,6 +689,7 @@ def parse_arguments():
     parser.add_argument("--keep-intermediate-files",type=bool,default=False,help="keep files generated during runtime")
     parser.add_argument("--autocomplete-repositories",type=bool,default=False,help="iterates over repositories for autocompletion")
     parser.add_argument("--autocomplete-repository-levels",type=int,default=2,help="folder depth to use")
+    parser.add_argument("--generate-xsd",type=bool,default=False,help="generate runtime.xsd (default:plugins/tpruntime.xsd)")
     args = parser.parse_args()
 
     ctx = Context(args)
@@ -696,6 +705,7 @@ def startup():
 
     ctx.run()
 
-    XSDManager.get().xsdcreator_write("plugins/tpruntime.xsd")
+    if ARG_GENERATE_XSD:
+        XSDManager.get().xsdcreator_write("plugins/tpruntime.xsd")
 
 startup()
