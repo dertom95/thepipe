@@ -1,5 +1,5 @@
 import re,argparse,os,time
-import shutil
+import shutil,copy
 
 from sys import platform
 from pathlib import Path
@@ -8,6 +8,7 @@ import subprocess
 
 from tools import BoolValue,NumberValue,FileValue,EnumValue,StringValue, VectorValue
 
+XMLNS=None
 HOST=None
 if platform == "linux" or platform == "linux2":
     HOST="linux"
@@ -43,10 +44,21 @@ def xget_b(xml,attrib,default_value):
     else:
         return default_value
 
-       
+def trim_text(text):
+    prefix=None
+    result=""
+    for line in text.split("\n"):
+        if len(line)==0:
+            continue
+        if not prefix:
+            prefix=line.replace(line.lstrip(),"")
+        result+="%s\n"%line.replace(prefix,"",1)
+    return result
+
 def xget_parameters(xml):
+    global XMLNS
     params={}
-    for param in xml.iter("param"):
+    for param in xml.iter("%sparam"%XMLNS):
         id = xgetrequired(param,"id")
         output = xget(param,"output","")
         default_value = xget(param,"default","")
@@ -95,17 +107,18 @@ def create_type(type_signature,default_value,required):
             m = re.search(enum_pattern,type_signature)
         return result_type
     else:
-        raise AttributeError("Unknown type:%s",type_signature)
+        raise AttributeError("Unknown type:%s" % type_signature)
 
 class Converter:
     CONVERTERS = {}
 
     def __init__(self,xml):
+        global XMLNS
         self.prefix = xgetrequired(xml,"prefix")
         self.name   = xgetrequired(xml,"name")
         self.target = xget(xml,"target","all")
         
-        cmd = xml.find("command")
+        cmd = xml.find("%scommand"%XMLNS)
         if cmd is None:
             raise AttributeError("Converter without command-tag!: %s" % ElementTree.tostring(xml))
 
@@ -145,7 +158,7 @@ class Converter:
         if self.tool_out_ext:
             file_extension=self.tool_out_ext
 
-        out_file = "%s%s-%s-%s.%s" %(temp_folder,self.qualified_name(),filename_without_folder,time.time(),file_extension)
+        out_file = "%s%s-%s-%s.%s" %(temp_folder,time.time(),self.qualified_name(),filename_without_folder,file_extension)
         
         id,output,tool_type,type_signature,description=self.params["out"]
         tool_type.set(out_file)
@@ -181,7 +194,7 @@ class Converter:
         file_history.append(out_file)
 
 
-        return retcode,out_file
+        return retcode,out_file,file_extension
         
         
 
@@ -200,6 +213,7 @@ class Tool:
     TOOLS={}
 
     def __init__(self,xml):
+        global XMLNS
         print(ElementTree.tostring(xml))
         self.xml=xml
         self.tool_type=xgetrequired(xml,"type")
@@ -207,7 +221,7 @@ class Tool:
         self.version=xget(xml,"version","unknown")
         self.is_default=xget_b(xml,"default",False)
         self.command=None
-        for cmd in xml.iter("command"):
+        for cmd in xml.iter("%scommand"%XMLNS):
             host = xgetrequired(cmd,"host")
             if host!=HOST:
                 # ignore tools for other HOSTs
@@ -253,6 +267,7 @@ class Tool:
 
     def execute(self,arguments):
         execution_command = "%s %s" % (self.command,arguments)
+        print(execution_command)
         retcode = os.system(execution_command)
 
         return retcode,execution_command
@@ -362,7 +377,7 @@ class Context:
             raise AttributeError("Pipeline without init:\n%s" % ElementTree.tostring(xml_pipeline))
 
         for ev in init.iter("eval"):
-            ev_str = ev.text
+            ev_str = trim_text(ev.text)
             exec(ev_str,shared_globals,shared_locals)
             execution_calls.append("eval start:\n%s\neval end:------" % ev_str)
 
@@ -375,6 +390,7 @@ class Context:
             shared_locals["repo_name"]=repo_name
             
             file_history=[input_filename]
+            execution_calls.append("\nInput-File:%s" %input_filename)
 
             shared_locals["init-full-filename"]=input_filename
             in_file = os.path.basename(input_filename)
@@ -385,7 +401,8 @@ class Context:
             shared_locals["init-file-ext"]=file_extension
 
             # execute pipeline for every input
-            for command in xml_pipeline:
+            for _command in xml_pipeline:
+                command = copy.deepcopy(_command)
                 shared_locals["full-filename"]=input_filename
                 in_file = os.path.basename(input_filename)
                 filename_wo_ext, file_extension = os.path.splitext(in_file)
@@ -402,10 +419,13 @@ class Context:
                 converter = Converter.get(tag)
                 if converter:
                     self.resolve_attribute_variables(command,shared_locals)
-                    result,input_filename = converter.execute(pipeline_folder,input_filename,command,file_history,execution_calls)
+                    result,input_filename,file_extension = converter.execute(pipeline_folder,input_filename,command,file_history,execution_calls)
+                    shared_locals["file-ext"]=file_extension
+                    if result!=0:
+                        raise AttributeError("command resulted in error!")
                 ## PYTHON-EVAL ##
                 elif tag=="eval":
-                    ev_str = command.text
+                    ev_str = trim_text(command.text)
                     exec(ev_str,shared_globals,shared_locals)
                     execution_calls.append("eval start:\n%s\neval end:------" % ev_str)
                 ## OUTPUT / COPY ##
@@ -419,6 +439,8 @@ class Context:
                     repo.write_file(input_filename,filename)
                     
                     execution_calls.append("output:%s => [%s]:%s" % (input_filename,repo_name,filename))
+                else:
+                    raise AttributeError("Unknown pipeline-command:%s"%tag)
 
         execution_file = open("%s%s-exe-list.%s.txt" % (pipeline_folder,pipeline_name,time.time()),"w")
         execution_text = "\n".join(execution_calls)        
@@ -448,6 +470,9 @@ class Context:
             self.execute_file(file)
 
 
+def namespace(element):
+    m = re.match(r'\{.*\}', element.tag)
+    return m.group(0) if m else ''
 
 def load_plugins(folder="plugins"):
     xml_files = Path(folder).rglob("*.xml")
@@ -461,10 +486,14 @@ def load_plugins(folder="plugins"):
     return xml_element_tree
 
 def parse_tools(xml_data):
-    for tool in xml_data.iter("tool"):
+    global XMLNS
+    XMLNS=namespace(xml_data)
+
+    print(ElementTree.tostring(xml_data))
+    for tool in xml_data.iter("%stool"%XMLNS):
         Tool.add_from_xml(tool)
 
-    for converter in xml_data.iter("converter"):
+    for converter in xml_data.iter("%sconverter"%XMLNS):
         Converter.add_from_xml(converter)
 
 def parse_arguments():

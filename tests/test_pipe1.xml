@@ -6,27 +6,37 @@
     <pipeline pl-name="animation" target="psx">
         <init>
             <eval>
-vx=320
-vy=0
-clutx=0
-cluty=490
+                vx=320
+                vy=0
+                clutx=0
+                cluty=490
+                scalex=64
+                scaley=64
             </eval>
 
             <input>
                 <file repository="fs1" filename="map2.png" />
                 <file repository="fs1" filename="map2_4.png" />
+                <file repository="fs1" filename="facial_expressions.jpg" />
             </input>
         </init>
 
         <ic-indexed colors="15" />
         <ic-psx-tim vpos="@[vx]x@[vy]" cpos="@[clutx]x@[cluty]" bpp="4" />
         <eval>
-vx+=64
-cluty+=1
+            vx+=64
+            cluty+=1
         </eval>
 
         <output repository="fs1" filename="export/@[target]/converted-@[init-file-wo-ext].@[file-ext]" />
-
+        <ic-rescale forcescale="@[scalex]x@[scaley]"/>
+        <output repository="fs1" filename="export/@[target]/converted-@[init-file-wo-ext]-@[scalex]_@[scaley].@[file-ext]" />
+        <eval>
+        scalex*=2
+        scaley*=2
+        if scalex>0:
+            scaley=512
+        </eval>
     </pipeline>
 
 </main>

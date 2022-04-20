@@ -60,8 +60,8 @@ class VectorValue:
 
     def output(self,template):
         for i in range(self.dimensions):
-            template.replace("@[%s]"%i,self.data[i])
-        template.replace("@",str(self.data))
+            template=template.replace("@[%s]"%i,self.data[i])
+        template=template.replace("@",str(self.data))
         return template
 
 

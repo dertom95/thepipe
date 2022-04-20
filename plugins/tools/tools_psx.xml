@@ -1,0 +1,5 @@
+<thepipeline  xmlns="https://thepipeline.com" xsi:schemaLocation="https://thepipeline.com ../xsd/thepipeline.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <tool id="img2tim" type="cli" target="psx">
+        <command host="linux" file="@/tools/linux/ic/psx/img2tim"/>
+    </tool>
+</thepipeline>

@@ -1,11 +1,6 @@
-<thepipeline>
-    <tools>
-        <tool id="convert" type="cli">
-            <command host="linux" file="/usr/bin/convert"/>
-            <command host="win"   file="@/tools/win/ic/convert.exe"/>
-        </tool>
-        <tool id="img2tim" type="cli" target="psx">
-            <command host="linux" file="@/tools/linux/ic/psx/img2tim"/>
-        </tool>
-    </tools>
-</thepipeline>
+<thepipeline xmlns="https://thepipeline.com" xsi:schemaLocation="https://thepipeline.com ../xsd/thepipeline.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <tool id="convert" type="cli">
+        <command host="linux" file="/usr/bin/convert" />
+        <command host="win" file="@/tools/win/ic/convert.exe" />
+    </tool>
+</thepipeline> 

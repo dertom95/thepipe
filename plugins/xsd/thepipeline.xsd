@@ -1,0 +1,136 @@
+<?xml version="1.0" ?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="https://thepipeline.com" xmlns="https://thepipeline.com" elementFormDefault="qualified">
+	<xs:simpleType name="tooltype" final="restriction">
+		<xs:union>
+			<xs:simpleType>
+				<xs:restriction base="xs:string"/>
+			</xs:simpleType>
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="cli"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:union>
+	</xs:simpleType>
+	<xs:simpleType name="targettype" final="restriction">
+		<xs:union>
+			<xs:simpleType>
+				<xs:restriction base="xs:string"/>
+			</xs:simpleType>
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="psx"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:union>
+	</xs:simpleType>
+	<xs:simpleType name="hosttype" final="restriction">
+		<xs:union>
+			<xs:simpleType>
+				<xs:restriction base="xs:string"/>
+			</xs:simpleType>
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="linux"/>
+					<xs:enumeration value="linux-arm"/>
+					<xs:enumeration value="macos"/>
+					<xs:enumeration value="win"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:union>
+	</xs:simpleType>
+	<xs:simpleType name="paramtype" final="restriction">
+		<xs:union>
+			<xs:simpleType>
+				<xs:restriction base="xs:string"/>
+			</xs:simpleType>
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="bool"/>
+					<xs:enumeration value="enum[]"/>
+					<xs:enumeration value="file"/>
+					<xs:enumeration value="vec[2]"/>
+					<xs:enumeration value="vec[3]"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:union>
+	</xs:simpleType>
+	<xs:simpleType name="booltype" final="restriction">
+		<xs:union>
+			<xs:simpleType>
+				<xs:restriction base="xs:string"/>
+			</xs:simpleType>
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="false"/>
+					<xs:enumeration value="true"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:union>
+	</xs:simpleType>
+	<xs:element name="thepipeline">
+		<xs:complexType>
+			<xs:choice minOccurs="0" maxOccurs="unbounded">
+				<xs:element name="converter">
+					<xs:complexType>
+						<xs:choice minOccurs="0" maxOccurs="unbounded">
+							<xs:element name="command">
+								<xs:complexType>
+									<xs:attribute name="arguments" type="xs:string" use="required"/>
+									<xs:attribute name="extension" type="xs:string"/>
+									<xs:attribute name="toolid" type="xs:string" use="required"/>
+								</xs:complexType>
+							</xs:element>
+							<xs:element name="parameters">
+								<xs:complexType>
+									<xs:choice minOccurs="0" maxOccurs="unbounded">
+										<xs:element name="param">
+											<xs:complexType>
+												<xs:attribute name="description" type="xs:string"/>
+												<xs:attribute name="id" type="xs:string" use="required"/>
+												<xs:attribute name="output" type="xs:string" use="required"/>
+												<xs:attribute name="required" type="booltype"/>
+												<xs:attribute name="type" type="paramtype" use="required"/>
+											</xs:complexType>
+										</xs:element>
+										<xs:element name="rip">
+											<xs:complexType>
+												<xs:attribute name="required" type="booltype"/>
+												<xs:attribute name="type" type="paramtype" use="required"/>
+											</xs:complexType>
+										</xs:element>
+									</xs:choice>
+								</xs:complexType>
+							</xs:element>
+						</xs:choice>
+						<xs:attribute name="name" type="xs:string" use="required"/>
+						<xs:attribute name="prefix" type="xs:string" use="required"/>
+						<xs:attribute name="target" type="targettype"/>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="tool">
+					<xs:complexType>
+						<xs:choice minOccurs="0" maxOccurs="unbounded">
+							<xs:element name="command">
+								<xs:complexType>
+									<xs:choice minOccurs="0" maxOccurs="unbounded">
+										<xs:element name="rip">
+											<xs:complexType>
+												<xs:attribute name="host" type="hosttype"/>
+											</xs:complexType>
+										</xs:element>
+									</xs:choice>
+									<xs:attribute name="file" type="xs:string"/>
+									<xs:attribute name="host" type="hosttype"/>
+								</xs:complexType>
+							</xs:element>
+						</xs:choice>
+						<xs:attribute name="id" type="xs:string" use="required"/>
+						<xs:attribute name="target" type="targettype"/>
+						<xs:attribute name="type" type="tooltype" use="required"/>
+					</xs:complexType>
+				</xs:element>
+			</xs:choice>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>

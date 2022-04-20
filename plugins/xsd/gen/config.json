@@ -1,0 +1,13 @@
+{
+    "rootname": "thepipeline",
+    "templates": [
+        {
+            "name": "thepipeline-tools",
+            "path": "templates/tp_tools_gen.xml.tmpl"
+        },
+        {
+            "name": "thepipeline-converter",
+            "path": "templates/tp_converter_gen.xml.tmpl"
+        }
+    ]
+}

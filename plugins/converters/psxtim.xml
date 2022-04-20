@@ -1,4 +1,5 @@
-<thepipeline>
+<?xml version="1.0"?>
+<thepipeline  xmlns="https://thepipeline.com" xsi:schemaLocation="https://thepipeline.com ../xsd/thepipeline.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <converter prefix="ic" name="psx-tim" target="psx">
         <parameters>
             <param id="in" output="@" type="file"/>
@@ -7,17 +8,7 @@
             <param id="cpos" output="-plt @[0] @[1]" type="vec[2]" description="Position of the CLUT in the vram"/>
             <param id="bpp" output="-bpp @" type="enum[4,8,16,255]" description="bits per color-information"/>
             <param id="alpha" output="-usealpha" type="bool" description="Use alpha"/> 
-        </parameters>
+        </parameters>  
         <command toolid="img2tim" arguments="@@" extension="tim"/>
-    </converter>
-
-    <converter prefix="ic" name="indexed">
-        <parameters>
-            <param id="in" output="@" type="file"/>
-            <param id="out" output="@" type="file"/>
-            <param id="colors" output="-colors @" type="number[0-255]" required="true" description="amount of colors" />
-            <param id="dither" output="+dither||" type="bool" description="dither result"/>
-        </parameters>
-        <command toolid="convert" arguments="@[in] @@ @[out]"/>
     </converter>
 </thepipeline>

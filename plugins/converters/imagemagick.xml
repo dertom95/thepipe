@@ -1,0 +1,20 @@
+<thepipeline  xmlns="https://thepipeline.com" xsi:schemaLocation="https://thepipeline.com ../xsd/thepipeline.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <converter prefix="ic" name="indexed">
+        <parameters>
+            <param id="in" output="@" type="file"/>
+            <param id="out" output="@" type="file"/>
+            <param id="colors" output="-colors @" type="number[0-255]" required="true" description="amount of colors" />
+            <param id="dither" output="+dither||" type="bool" description="dither result"/>
+        </parameters> 
+        <command toolid="convert" arguments="@[in] @@ @[out]" extension="png"/>
+    </converter>
+    <converter name="rescale" prefix="ic">
+        <parameters>
+            <param id="in" output="@" type="file"/>
+            <param id="out" output="@" type="file"/>
+            <param id="scale" output="-resize @[0]x@[1]" type="vec[2]" />
+            <param id="forcescale" output="-resize @[0]x@[1]!" type="vec[2]" />
+        </parameters>
+        <command arguments="@[in] @@ @[out]" toolid="convert" />
+    </converter>
+</thepipeline>
