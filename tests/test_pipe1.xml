@@ -1,7 +1,12 @@
 <main xmlns="https://tp-runtime.com" xsi:schemaLocation="https://tp-runtime.com ../plugins/tpruntime.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <repositories>
-        <file-repository name="fs1" folder="/home/ttrocha/_dev/projects/python/thepipeline" />
-        <file-repository name="humble" folder="/home/ttrocha/nas-big1/media/2d/humble-stuff" levels="1"/>
+        <file-repository name="fs1" folder="/home/ttrocha/_dev/projects/python/thepipeline">
+            <filter extension="jpg|png|wav|mp3"/>
+        </file-repository>
+
+        <file-repository name="humble" folder="/home/ttrocha/nas-big1/media/2d/humble-stuff">
+            <filter extension="jpg|png|wav|mp3"/>
+        </file-repository>
     </repositories>
 
     <pipeline pl-name="animation" target="psx">
@@ -18,7 +23,8 @@
             <input>
                 <file filename="fs1://map2.png" />
                 <file filename="fs1://map2_4.png" />
-                <file filename="humble://fantasychestspack/1.png" />
+                <file filename="humble://16-bitsci-fispriteset/16-Bit Sci-Fi Sprite Set/oryx_16bit_scifi.jpg" />
+                <file filename="humble://iconichomestead_pixelartasset/iconic_homestead v2.png"/>
             </input>
         </init>
         <ic-indexed colors="4"/>
@@ -29,7 +35,7 @@
         </eval>  
 
         <output repository="fs1" filename="export/@[target]/converted-@[init-file-wo-ext].@[file-ext]" />
-        <ic-rescale scale="@[scalex]x@[scaley]"/>
+        <ic-rescale forcescale="@[scalex]x@[scaley]"/>
         <output repository="fs1" target="all" filename="export/@[target]/converted-@[init-file-wo-ext]-@[scalex]_@[scaley].@[file-ext]" />
         <eval>
             scalex*=2

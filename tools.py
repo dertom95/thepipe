@@ -2,23 +2,24 @@ import re,os
 from xsd_creator import XSDCreator
 
 class NumberValue:
-    def __init__(self,default_value=16,min=0,max=float("inf"),required=False):
-        self.min=int(min)
-        self.max=int(max)
+    def __init__(self,default_value=16,min=0,max=float("inf"),required=False,is_integer=True):
+        self.is_integer=is_integer
+        self.min=int(min) if is_integer else float(min)
+        self.max=int(max) if is_integer else float(max)
         try:
-            self.default_value=int(default_value)
+            self.default_value=int(default_value)  if is_integer else float(default_value)
         except:
             self.default_value=0
 
-        self.value=int(self.default_value)
+        self.value=int(self.default_value) if is_integer else float(self.default_value)
         self.required=required
         self.is_set=False
 
     def put_xsd(self,creator,block,blockname,name):
-        creator.add_attribute(block,name,self.required,"xs:float")
+        creator.add_attribute(block,name,self.required,"xs:int" if self.is_integer else "xs:float")
 
     def set(self,value):
-        value=int(value)
+        value=int(value) if self.is_integer else float(value)
         if value < self.min:
             value=self.min
         if value > self.max:
@@ -56,8 +57,9 @@ class VectorValue:
         creator.add_attribute(block,name,self.required,typename)
 
     def set(self,value):
-        self.data=self.dimensions*[0]
-        self.is_set=False
+        splits = re.split(r"x|,",value)
+        self.data=splits
+        self.is_set=True
 
     def value_set(self):
         return self.is_set

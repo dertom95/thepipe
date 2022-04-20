@@ -10,6 +10,9 @@ from tools import BoolValue,NumberValue,FileValue,EnumValue,StringValue, VectorV
 XMLNS=None
 XMLR=None
 HOST=None
+ARG_AUTOCOMPLETE_REPOSITORIES=False
+ARG_AUTOCOMPLETE_REPOSITORY_LEVELS=2
+
 if platform == "linux" or platform == "linux2":
     HOST="linux"
 elif platform == "darwin":
@@ -42,6 +45,9 @@ class XSDManager:
         self.creator.add_attribute(filerepo,"folder",True)
         self.creator.add_attribute(filerepo,"levels")
 
+        fr_filter=self.creator.create_block(filerepo,"filter")
+        self.creator.add_attribute(fr_filter,"extension")
+
         self.pipeline=self.creator.create_block(main,"pipeline")
         self.creator.add_attribute(self.pipeline,"pl-name",True)
         self.creator.add_attribute(self.pipeline,"target",False,"targettype")
@@ -51,7 +57,7 @@ class XSDManager:
 
         pi_input=self.creator.create_block(p_init,"input")
         pii_file=self.creator.create_block(pi_input,"file")
-        self.creator.add_attribute(pii_file,"filename",True,"filetype")
+        self.creator.add_attribute(pii_file,"filename",True,"filetype" if ARG_AUTOCOMPLETE_REPOSITORIES else "xs:string")
 
         p_eval=self.creator.create_block(self.pipeline,"eval",True)
 
@@ -357,10 +363,10 @@ class Tool:
 
 class FileRepository:
     IGNORE_FOLDERS=["__pycache__",".venv",".vscode","temp",".git"]
-    def __init__(self,repo_name,folder,levels):
+    def __init__(self,repo_name,folder):
         self.folder=folder
         self.name=repo_name
-        self.scrap_levels=levels
+        self.filters=[]
     
     def get_file(self,input):
         # repo,all=FileRepository.get_repo_from_file(input)
@@ -374,6 +380,18 @@ class FileRepository:
             raise AttributeError("FileRepo[%s]. Could not locate file:%s" % (self.folder,input))
 
         return os.path.abspath(filename)
+
+    def add_filter(self,folder_filter,filename_filter,extension_filter):
+        def filter(folder,filename,extension):
+            if folder_filter and re.match(folder_filter,folder) is None:
+                return False
+            if filename_filter and re.match(filename_filter,filename) is None:
+                return False
+            if extension_filter and re.match(extension_filter,extension) is None:
+                return False
+            return True
+        
+        self.filters.append(filter)
 
     def write_file(self,input,output_in_repo):
         output_filename="%s/%s" % (self.folder,output_in_repo)
@@ -393,9 +411,15 @@ class FileRepository:
 
         return True
 
+    def execute_filer(self,folder,filename,extension):
+        for filter in self.filters:
+            if not filter(folder,filename,extension):
+                return False
+        return True
+
     def get_all_files(self):
         listOfFiles = []
-        for (dirpath, dirnames, filenames) in walklevel(self.folder,self.scrap_levels):
+        for (dirpath, dirnames, filenames) in walklevel(self.folder,ARG_AUTOCOMPLETE_REPOSITORY_LEVELS):
             rel_folder = os.path.relpath(dirpath,self.folder)
             if not self.is_valid_folder(rel_folder):
                 continue
@@ -403,7 +427,14 @@ class FileRepository:
                 rel_folder=""
 
             repodir="%s://%s" % (self.name,rel_folder)
-            listOfFiles += [os.path.join(repodir, file) for file in filenames]        
+
+            if len(self.filters)>0:
+                for file in filenames:
+                    filename, file_extension = os.path.splitext(file)
+                    if self.execute_filer(rel_folder,filename,file_extension[1:]):
+                        listOfFiles.append(os.path.join(repodir, file))
+            else:
+                listOfFiles += [os.path.join(repodir, file) for file in filenames]        
         return listOfFiles
 
     def get_repo_from_file(input):
@@ -428,8 +459,12 @@ class InputFile:
 
 class Context:
     def __init__(self,args):
+        global ARG_AUTOCOMPLETE_REPOSITORIES,ARG_AUTOCOMPLETE_REPOSITORY_LEVELS
+
         self.input_files = args.input
         self.keep_intermediate = args.keep_intermediate_files
+        ARG_AUTOCOMPLETE_REPOSITORIES = args.autocomplete_repositories
+        ARG_AUTOCOMPLETE_REPOSITORY_LEVELS = args.autocomplete_repository_levels
         self.repositories={}
 
     def add_repository_from_xml(self,xml):
@@ -441,12 +476,18 @@ class Context:
         if xml.tag=="%sfile-repository"%XMLR:
             name = xgetrequired(xml,"name")
             folder = xgetrequired(xml,"folder")
-            levels = xget(xml,"levels","2")
-            file_repo = FileRepository(name,folder,int(levels))
+            file_repo = FileRepository(name,folder)
             self.repositories[name]=file_repo
 
-            files = file_repo.get_all_files()
-            XSDManager.get().add_files(files)
+            for filter in xml.iter("%sfilter"%XMLR):
+                filter_folder   = xget(filter,"folder",None)
+                filter_filename = xget(filter,"filename",None) 
+                filter_extension= xget(filter,"extension",None)
+                file_repo.add_filter(filter_folder,filter_filename,filter_extension)
+
+            if ARG_AUTOCOMPLETE_REPOSITORIES:
+                files = file_repo.get_all_files()
+                XSDManager.get().add_files(files)
         
     
     def get_repository(self,repo_name):
@@ -594,9 +635,10 @@ class Context:
         if repos is not None:
             for repo in repos:
                 self.add_repository_from_xml(repo)
-        default_repo=self.repositories["cwd"]=FileRepository("cwd",os.getcwd(),2)
-        files = default_repo.get_all_files()
-        XSDManager.get().add_files(files)        
+        default_repo=self.repositories["cwd"]=FileRepository("cwd",os.getcwd())
+        if ARG_AUTOCOMPLETE_REPOSITORIES:
+            files = default_repo.get_all_files()
+            XSDManager.get().add_files(files)        
 
         for pipeline in xml.iter("%spipeline"%XMLR):
             self.execute_pipeline(pipeline)
@@ -637,6 +679,8 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="thepipeline - universal assets processor")
     parser.add_argument("--input",action="append",help="input xml-files", required=True)
     parser.add_argument("--keep-intermediate-files",type=bool,default=False,help="keep files generated during runtime")
+    parser.add_argument("--autocomplete-repositories",type=bool,default=False,help="iterates over repositories for autocompletion")
+    parser.add_argument("--autocomplete-repository-levels",type=int,default=2,help="folder depth to use")
     args = parser.parse_args()
 
     ctx = Context(args)
@@ -646,10 +690,10 @@ def execute_context(ctx):
     pass    
 
 def startup():
+    ctx = parse_arguments()
     xml = load_plugins()
     parse_tools(xml)
 
-    ctx = parse_arguments()
     ctx.run()
 
     XSDManager.get().xsdcreator_write("plugins/tpruntime.xsd")
