@@ -1,0 +1,47 @@
+<?xml version="1.0" ?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="https://tp-runtime.com" xmlns="https://tp-runtime.com" elementFormDefault="qualified">
+	<xs:simpleType name="targettype" final="restriction">
+		<xs:union>
+			<xs:simpleType>
+				<xs:restriction base="xs:string"/>
+			</xs:simpleType>
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="win"/>
+					<xs:enumeration value="linux"/>
+					<xs:enumeration value="linux-arm"/>
+					<xs:enumeration value="macos"/>
+					<xs:enumeration value="psx"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:union>
+	</xs:simpleType>
+	<xs:element name="main">
+		<xs:complexType>
+			<xs:choice minOccurs="0" maxOccurs="unbounded">
+				<xs:element name="repositories">
+					<xs:complexType>
+						<xs:choice minOccurs="0" maxOccurs="unbounded">
+							<xs:element name="file-repository">
+								<xs:complexType>
+									<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+									<xs:attribute name="name" type="xs:string" use="required"/>
+									<xs:attribute name="folder" type="xs:string" use="required"/>
+								</xs:complexType>
+							</xs:element>
+						</xs:choice>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="pipeline">
+					<xs:complexType>
+						<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+						<xs:attribute name="pl-name" type="xs:string" use="required"/>
+						<xs:attribute name="target" type="targettype"/>
+					</xs:complexType>
+				</xs:element>
+			</xs:choice>
+			<xs:attribute name="target" type="xs:string"/>
+			<xs:attribute name="required" type="xs:string"/>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>

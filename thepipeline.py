@@ -4,8 +4,7 @@ import shutil,copy
 from sys import platform
 from pathlib import Path
 from xml.etree import ElementTree
-import subprocess
-
+from xsd_creator import XSDCreator
 from tools import BoolValue,NumberValue,FileValue,EnumValue,StringValue, VectorValue
 
 XMLNS=None
@@ -18,6 +17,69 @@ elif platform == "win32":
     HOST="win"
 else:
     raise AttributeError("Unknown platform: %s"  %  platform)
+
+class XSDManager:
+    instance=None
+
+    def get():
+        if not XSDManager.instance:
+            XSDManager.instance=XSDManager()
+        return XSDManager.instance
+
+    def __init__(self):
+        self.targets=[]
+        self.creator=XSDCreator("tp-runtime")      
+
+        main=self.creator.create_block(None,"main")
+        self.creator.add_attribute(main,"target")
+        self.creator.add_attribute(main,"required")
+
+        repositories=self.creator.create_block(main,"repositories")
+        filerepo=self.creator.create_block(repositories,"file-repository")
+        self.creator.add_attribute(filerepo,"name",True)
+        self.creator.add_attribute(filerepo,"folder",True)
+
+        self.pipeline=self.creator.create_block(main,"pipeline")
+        self.creator.add_attribute(self.pipeline,"pl-name",True)
+        self.creator.add_attribute(self.pipeline,"target",False,"targettype")
+
+        p_init=self.creator.create_block(self.pipeline,"init")
+        pi_eval=self.creator.create_block(p_init,"eval",True)
+
+        pi_input=self.creator.create_block(p_init,"input")
+        pii_file=self.creator.create_block(pi_input,"file")
+        self.creator.add_attribute(pii_file,"repository")
+        self.creator.add_attribute(pii_file,"filename",True)
+
+        p_eval=self.creator.create_block(self.pipeline,"eval",True)
+
+        p_output=self.creator.create_block(self.pipeline,"output")
+        self.creator.add_attribute(p_output,"repository")
+        self.creator.add_attribute(p_output,"target")
+        self.creator.add_attribute(p_output,"filename",True)
+
+    def add_target(self,target_name):
+        if target_name not in self.targets:
+            self.targets.append(target_name)
+
+    def add_converter(self,converter):
+        xsdconverter=self.creator.create_block(self.pipeline,converter.qualified_name())
+        for (id,output,tool_type,type_signature,description) in converter.params.values():
+            if id=="in" or id=="out":
+                continue
+            tool_type.put_xsd(self.creator,xsdconverter,converter.qualified_name(),id)
+        
+
+
+    def xsdcreator_write(self,filename):
+        self.creator.create_enum_type("targettype",self.targets)
+
+        result=self.creator.to_string()
+        print(result)
+
+        xsd_file = open(filename,"w")
+        xsd_file.write(result)
+        xsd_file.close()    
 
 
 def xgetrequired(xml,attrib):
@@ -44,17 +106,6 @@ def xget_b(xml,attrib,default_value):
     else:
         return default_value
 
-def trim_text(text):
-    prefix=None
-    result=""
-    for line in text.split("\n"):
-        if len(line)==0:
-            continue
-        if not prefix:
-            prefix=line.replace(line.lstrip(),"")
-        result+="%s\n"%line.replace(prefix,"",1)
-    return result
-
 def xget_parameters(xml):
     global XMLNS
     params={}
@@ -68,6 +119,17 @@ def xget_parameters(xml):
         tool_type=create_type(type_signature,default_value,required)
         params[id]=(id,output,tool_type,type_signature,description)
     return params
+
+def trim_text(text):
+    prefix=None
+    result=""
+    for line in text.split("\n"):
+        if len(line)==0:
+            continue
+        if not prefix:
+            prefix=line.replace(line.lstrip(),"")
+        result+="%s\n"%line.replace(prefix,"",1)
+    return result
 
 def create_type(type_signature,default_value,required):
     if type_signature=="bool":
@@ -117,6 +179,7 @@ class Converter:
         self.prefix = xgetrequired(xml,"prefix")
         self.name   = xgetrequired(xml,"name")
         self.target = xget(xml,"target","all")
+        XSDManager.get().add_target(self.target)        
         
         cmd = xml.find("%scommand"%XMLNS)
         if cmd is None:
@@ -127,6 +190,7 @@ class Converter:
         self.tool_out_ext = xget(cmd,"extension",None)
 
         self.params = xget_parameters(xml)
+        XSDManager.get().add_converter(self)
     
     def qualified_name(self):
         return "%s-%s" % (self.prefix,self.name)
@@ -220,6 +284,9 @@ class Tool:
         self.tool_id=xgetrequired(xml,"id")
         self.version=xget(xml,"version","unknown")
         self.is_default=xget_b(xml,"default",False)
+        self.target=xget(xml,"target","all")
+        XSDManager.get().add_target(self.target)
+
         self.command=None
         for cmd in xml.iter("%scommand"%XMLNS):
             host = xgetrequired(cmd,"host")
@@ -362,6 +429,7 @@ class Context:
         execution_calls=[]
 
         target = xget(xml_pipeline,"target","all")
+
         pipeline_name = xgetrequired(xml_pipeline,"pl-name")
 
         pipeline_folder = "temp/%s%s/" % (pipeline_name,time.time())
@@ -432,13 +500,18 @@ class Context:
                 elif tag=="output":
                     repo_name=xget(command,"repository","cwd")
                     filename=xgetrequired(command,"filename")
-                    
+                    target_before=target
+                    target=xget(command,"target",target)
+                    shared_locals[target]=target
+
                     filename=self.resolve_variables_in_string(filename,shared_locals)
 
                     repo = self.get_repository(repo_name)
                     repo.write_file(input_filename,filename)
                     
                     execution_calls.append("output:%s => [%s]:%s" % (input_filename,repo_name,filename))
+                    target=target_before
+                    shared_locals[target]=target                    
                 else:
                     raise AttributeError("Unknown pipeline-command:%s"%tag)
 
@@ -449,8 +522,6 @@ class Context:
 
         if not self.keep_intermediate:
             shutil.rmtree(pipeline_folder)
-                   
-
 
 
     def execute_file(self,filename):
@@ -514,5 +585,7 @@ def startup():
 
     ctx = parse_arguments()
     ctx.run()
+
+    XSDManager.get().xsdcreator_write("plugins/tpruntime.xsd")
 
 startup()

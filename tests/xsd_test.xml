@@ -1,0 +1,10 @@
+<main   xmlns="https://tp-runtime.com" 
+        xsi:schemaLocation="https://tp-runtime.com test.xsd" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" required="t" target="aa" >
+<repositories>
+    <file-repository name="fs1" folder="/home/ttrocha" />
+</repositories>
+
+<pipeline pl-name="tims" target="linux" /> 
+
+</main>

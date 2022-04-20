@@ -1,4 +1,5 @@
 import re,os
+from xsd_creator import XSDCreator
 
 class NumberValue:
     def __init__(self,default_value=16,min=0,max=float("inf"),required=False):
@@ -8,6 +9,9 @@ class NumberValue:
         self.value=default_value
         self.required=required
         self.is_set=False
+
+    def put_xsd(self,creator,block,blockname,name):
+        creator.add_attribute(block,name,self.required,"xs:float")
 
     def set(self,value):
         if value < self.min:
@@ -41,17 +45,12 @@ class VectorValue:
         self.dimensions=dimensions
         self.is_set=False
 
+    def put_xsd(self,creator:XSDCreator,block,blockname,name):
+        typename="vec%stype"%self.dimensions
+        creator.create_enum_type(typename,[",".join(3*["VAL"])])
+        creator.add_attribute(block,name,self.required,typename)
+
     def set(self,value):
-        self.is_set=True
-        splits=re.split("x|,",value)
-        if len(splits)!=self.dimensions:
-            raise AttributeError("vector[%s]: input: %s: invalid amount of values:%s" % ( self.dimensions,value,len(splits) ))
-        self.data=splits
-
-    def get(self,pos,value):
-        return self.data[pos]
-
-    def reset(self):
         self.data=self.dimensions*[0]
         self.is_set=False
 
@@ -63,6 +62,10 @@ class VectorValue:
             template=template.replace("@[%s]"%i,self.data[i])
         template=template.replace("@",str(self.data))
         return template
+    
+    def reset(self):
+        self.data=self.dimensions*[0]        
+        self.is_set=False
 
 
 class FileValue:
@@ -75,6 +78,9 @@ class FileValue:
         self.is_set=True
         self.value=value
         #todo: check if file is available!?
+
+    def put_xsd(self,creator,block,blockname,name):
+        creator.add_attribute(block,name,self.required)        
 
     def get(self,value):
         return self.value
@@ -96,6 +102,9 @@ class StringValue:
         self.value=default_value
         self.default_value=default_value
         self.required=required
+
+    def put_xsd(self,creator,block,blockname,name):
+        creator.add_attribute(block,name,self.required)
 
     def set(self,value):
         self.is_set=True
@@ -124,6 +133,11 @@ class EnumValue:
         self.required=required
         self.enum_values=[]
         self.default_value=default_value
+
+    def put_xsd(self,creator,block,blockname,name):
+        typename="%s_%stype"%(blockname,name)
+        creator.create_enum_type(typename,self.enum_values)
+        creator.add_attribute(block,name,self.required,typename)        
 
     def add_enum_value(self,value):
         if value not in self.enum_values:
@@ -156,6 +170,10 @@ class BoolValue:
         self.required=required
         self.value=default_value
     
+    def put_xsd(self,creator:XSDCreator,block,blockname,name):
+        creator.create_enum_type("booltype",["true","false"],True)
+        creator.add_attribute(block,name,self.required,"booltype")
+
     def set(self,value):
         self.is_set=True
         self.value=value

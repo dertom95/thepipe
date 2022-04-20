@@ -1,4 +1,4 @@
-<main>
+<main xmlns="https://tp-runtime.com" xsi:schemaLocation="https://tp-runtime.com ../plugins/tpruntime.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <repositories>
         <file-repository name="fs1" folder="/home/ttrocha/_dev/projects/python/thepipeline" />
     </repositories>
@@ -12,7 +12,7 @@
                 cluty=490
                 scalex=64
                 scaley=64
-            </eval>
+            </eval> 
 
             <input>
                 <file repository="fs1" filename="map2.png" />
@@ -20,23 +20,23 @@
                 <file repository="fs1" filename="facial_expressions.jpg" />
             </input>
         </init>
-
+        <ic-psx-tim bpp="16" cpos="VAL,VAL,VAL"/>
         <ic-indexed colors="15" />
         <ic-psx-tim vpos="@[vx]x@[vy]" cpos="@[clutx]x@[cluty]" bpp="4" />
         <eval>
             vx+=64
             cluty+=1
-        </eval>
+        </eval>  
 
         <output repository="fs1" filename="export/@[target]/converted-@[init-file-wo-ext].@[file-ext]" />
         <ic-rescale forcescale="@[scalex]x@[scaley]"/>
-        <output repository="fs1" filename="export/@[target]/converted-@[init-file-wo-ext]-@[scalex]_@[scaley].@[file-ext]" />
+        <output repository="fs1" target="all" filename="export/@[target]/converted-@[init-file-wo-ext]-@[scalex]_@[scaley].@[file-ext]" />
         <eval>
-        scalex*=2
-        scaley*=2
-        if scalex>0:
-            scaley=512
-        </eval>
+            scalex*=2
+            scaley*=2
+            if scalex>0:
+                scaley=512
+        </eval> 
     </pipeline>
 
 </main>
