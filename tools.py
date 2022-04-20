@@ -3,10 +3,14 @@ from xsd_creator import XSDCreator
 
 class NumberValue:
     def __init__(self,default_value=16,min=0,max=float("inf"),required=False):
-        self.min=min
-        self.max=max
-        self.default_value=default_value
-        self.value=default_value
+        self.min=int(min)
+        self.max=int(max)
+        try:
+            self.default_value=int(default_value)
+        except:
+            self.default_value=0
+
+        self.value=int(self.default_value)
         self.required=required
         self.is_set=False
 
@@ -14,6 +18,7 @@ class NumberValue:
         creator.add_attribute(block,name,self.required,"xs:float")
 
     def set(self,value):
+        value=int(value)
         if value < self.min:
             value=self.min
         if value > self.max:
@@ -32,7 +37,7 @@ class NumberValue:
         return self.is_set
 
     def output(self,template):
-        return template.replace("@",self.value)        
+        return template.replace("@",str(self.value))        
 
 class VectorValue:
     def __init__(self,dimensions,default_value=None,required=False):

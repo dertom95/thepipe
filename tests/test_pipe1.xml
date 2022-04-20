@@ -21,8 +21,7 @@
                 <file filename="humble://fantasychestspack/1.png" />
             </input>
         </init>
-        <ic-psx-tim bpp="16" cpos="VAL,VAL,VAL"/>
-        <ic-indexed colors="15" />
+        <ic-indexed colors="4"/>
         <ic-psx-tim vpos="@[vx]x@[vy]" cpos="@[clutx]x@[cluty]" bpp="4" />
         <eval>
             vx+=64
