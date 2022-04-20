@@ -8,6 +8,7 @@ from xsd_creator import XSDCreator
 from tools import BoolValue,NumberValue,FileValue,EnumValue,StringValue, VectorValue
 
 XMLNS=None
+XMLR=None
 HOST=None
 if platform == "linux" or platform == "linux2":
     HOST="linux"
@@ -20,6 +21,7 @@ else:
 
 class XSDManager:
     instance=None
+    files=[]
 
     def get():
         if not XSDManager.instance:
@@ -38,6 +40,7 @@ class XSDManager:
         filerepo=self.creator.create_block(repositories,"file-repository")
         self.creator.add_attribute(filerepo,"name",True)
         self.creator.add_attribute(filerepo,"folder",True)
+        self.creator.add_attribute(filerepo,"levels")
 
         self.pipeline=self.creator.create_block(main,"pipeline")
         self.creator.add_attribute(self.pipeline,"pl-name",True)
@@ -48,8 +51,7 @@ class XSDManager:
 
         pi_input=self.creator.create_block(p_init,"input")
         pii_file=self.creator.create_block(pi_input,"file")
-        self.creator.add_attribute(pii_file,"repository")
-        self.creator.add_attribute(pii_file,"filename",True)
+        self.creator.add_attribute(pii_file,"filename",True,"filetype")
 
         p_eval=self.creator.create_block(self.pipeline,"eval",True)
 
@@ -58,6 +60,9 @@ class XSDManager:
         self.creator.add_attribute(p_output,"target")
         self.creator.add_attribute(p_output,"filename",True)
 
+    def add_files(self,files):
+        self.files.extend(files)
+    
     def add_target(self,target_name):
         if target_name not in self.targets:
             self.targets.append(target_name)
@@ -73,6 +78,7 @@ class XSDManager:
 
     def xsdcreator_write(self,filename):
         self.creator.create_enum_type("targettype",self.targets)
+        self.creator.create_enum_type("filetype",self.files)
 
         result=self.creator.to_string()
         print(result)
@@ -170,6 +176,16 @@ def create_type(type_signature,default_value,required):
         return result_type
     else:
         raise AttributeError("Unknown type:%s" % type_signature)
+
+def walklevel(some_dir, level=1):
+    some_dir = some_dir.rstrip(os.path.sep)
+    assert os.path.isdir(some_dir)
+    num_sep = some_dir.count(os.path.sep)
+    for root, dirs, files in os.walk(some_dir):
+        yield root, dirs, files
+        num_sep_this = root.count(os.path.sep)
+        if num_sep + level <= num_sep_this:
+            del dirs[:] 
 
 class Converter:
     CONVERTERS = {}
@@ -339,12 +355,20 @@ class Tool:
 
         return retcode,execution_command
 
-
 class FileRepository:
-    def __init__(self,folder):
+    IGNORE_FOLDERS=["__pycache__",".venv",".vscode","temp",".git"]
+    def __init__(self,repo_name,folder,levels):
         self.folder=folder
+        self.name=repo_name
+        self.scrap_levels=levels
     
     def get_file(self,input):
+        # repo,all=FileRepository.get_repo_from_file(input)
+        # if repo!=self.name:
+        #     raise AttributeError("FileRepo[%s]. Tried to locate file from other filerepo!:%s" % (self.folder,input))
+
+        # input = input.replace(all,"")
+
         filename="%s/%s" % (self.folder,input)
         if not os.path.exists(filename):
             raise AttributeError("FileRepo[%s]. Could not locate file:%s" % (self.folder,input))
@@ -360,10 +384,41 @@ class FileRepository:
             pass
         shutil.copyfile(input,output_filename)
 
+    def is_valid_folder(self,folder):
+        if folder in FileRepository.IGNORE_FOLDERS:
+            return False
+        for invalid_folder in FileRepository.IGNORE_FOLDERS:
+            if folder.startswith(invalid_folder):
+                return False
+
+        return True
+
+    def get_all_files(self):
+        listOfFiles = []
+        for (dirpath, dirnames, filenames) in walklevel(self.folder,self.scrap_levels):
+            rel_folder = os.path.relpath(dirpath,self.folder)
+            if not self.is_valid_folder(rel_folder):
+                continue
+            if rel_folder==".":
+                rel_folder=""
+
+            repodir="%s://%s" % (self.name,rel_folder)
+            listOfFiles += [os.path.join(repodir, file) for file in filenames]        
+        return listOfFiles
+
+    def get_repo_from_file(input):
+        m=re.search(r"(.+?)://",input)
+        if m is None:
+            raise AttributeError("Could not filter file-repository:%s" % input)
+
+        all=m.group(0)
+        repo=m.group(1)
+        return repo,all
+
 class InputFile:
-    def __init__(self,relative_part,repo="cwd"):
+    def __init__(self,relative_part,repo):
         self.repo=repo
-        self.relative_part=relative_part
+        self.relative_part=relative_part.replace("%s://"%repo,"")
 
     def retrieve(self,context):
         repo = context.get_repository(self.repo)
@@ -383,19 +438,25 @@ class Context:
         if name in self.repositories:
             raise AttributeError("Repositiory with name:%s already present!" % name)
 
-        if xml.tag=="file-repository":
+        if xml.tag=="%sfile-repository"%XMLR:
+            name = xgetrequired(xml,"name")
             folder = xgetrequired(xml,"folder")
-            file_repo = FileRepository(folder)
+            levels = xget(xml,"levels","2")
+            file_repo = FileRepository(name,folder,int(levels))
             self.repositories[name]=file_repo
+
+            files = file_repo.get_all_files()
+            XSDManager.get().add_files(files)
+        
     
     def get_repository(self,repo_name):
         return self.repositories[repo_name]
 
     def retrieve_input(self,xml_input):
-        tag = xml_input.tag.lower()
+        tag = xml_input.tag.lower().replace(XMLR,"")
         if tag=="file":
             filename = xgetrequired(xml_input,"filename")
-            repo_name = xget(xml_input,"repository","cwd")
+            repo_name,all = FileRepository.get_repo_from_file(filename)
             input_file = InputFile(filename,repo_name).retrieve(self)
             return (repo_name,input_file)
         else:
@@ -440,16 +501,16 @@ class Context:
 
         shared_locals["target"]=target
 
-        init=xml_pipeline.find("init")
+        init=xml_pipeline.find("%sinit"%XMLR)
         if init is None:
             raise AttributeError("Pipeline without init:\n%s" % ElementTree.tostring(xml_pipeline))
 
-        for ev in init.iter("eval"):
+        for ev in init.iter("%seval"%XMLR):
             ev_str = trim_text(ev.text)
             exec(ev_str,shared_globals,shared_locals)
             execution_calls.append("eval start:\n%s\neval end:------" % ev_str)
 
-        xml_input=init.find("input")
+        xml_input=init.find("%sinput"%XMLR)
         if xml_input is None:
             raise AttributeError("Pipeline.Init without <input/>\n%s" % ElementTree.tostring(xml_pipeline))
         
@@ -479,7 +540,7 @@ class Context:
                 shared_locals["file-wo-ext"]=filename_wo_ext
                 shared_locals["file-ext"]=file_extension
 
-                tag = command.tag.lower()
+                tag = command.tag.lower().replace(XMLR,"")
                 if tag=="init":
                     continue
 
@@ -502,7 +563,7 @@ class Context:
                     filename=xgetrequired(command,"filename")
                     target_before=target
                     target=xget(command,"target",target)
-                    shared_locals[target]=target
+                    shared_locals["target"]=target
 
                     filename=self.resolve_variables_in_string(filename,shared_locals)
 
@@ -511,7 +572,7 @@ class Context:
                     
                     execution_calls.append("output:%s => [%s]:%s" % (input_filename,repo_name,filename))
                     target=target_before
-                    shared_locals[target]=target                    
+                    shared_locals["target"]=target                    
                 else:
                     raise AttributeError("Unknown pipeline-command:%s"%tag)
 
@@ -526,13 +587,18 @@ class Context:
 
     def execute_file(self,filename):
         xml = ElementTree.parse(filename).getroot()
-        repos = xml.find("repositories")
+        global XMLR
+        XMLR=namespace(xml)        
+
+        repos = xml.find("%srepositories"%XMLR)
         if repos is not None:
             for repo in repos:
                 self.add_repository_from_xml(repo)
-        self.repositories["cwd"]=FileRepository(os.getcwd())
+        default_repo=self.repositories["cwd"]=FileRepository("cwd",os.getcwd(),2)
+        files = default_repo.get_all_files()
+        XSDManager.get().add_files(files)        
 
-        for pipeline in xml.iter("pipeline"):
+        for pipeline in xml.iter("%spipeline"%XMLR):
             self.execute_pipeline(pipeline)
                 
 
