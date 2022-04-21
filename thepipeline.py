@@ -1,3 +1,4 @@
+from inspect import Attribute
 import re,argparse,os,time
 import shutil,copy
 
@@ -5,7 +6,7 @@ from sys import platform
 from pathlib import Path
 from xml.etree import ElementTree
 from xsd_creator import XSDCreator
-from tools import BoolValue,NumberValue,FileValue,EnumValue,StringValue, VectorValue
+from tools import BoolValue, InputFile, MultiFileValue,NumberValue,FileValue,EnumValue,StringValue, VectorValue,InputFile
 
 XMLNS=None
 XMLR=None
@@ -13,6 +14,9 @@ HOST=None
 ARG_AUTOCOMPLETE_REPOSITORIES=False
 ARG_AUTOCOMPLETE_REPOSITORY_LEVELS=2
 ARG_GENERATE_XSD=False
+
+INPUT_TYPE_SINGLEFILE = 0
+INPUT_TYPE_MULTIFILE  = 1
 
 if platform == "linux" or platform == "linux2":
     HOST="linux"
@@ -54,13 +58,22 @@ class XSDManager:
         self.creator.add_attribute(self.pipeline,"target",False,"targettype")
 
         p_init=self.creator.create_block(self.pipeline,"init")
-        pi_eval=self.creator.create_block(p_init,"eval",True)
+        pi_eval=self.creator.create_block(p_init,"eval",None,True)
+
+        
+        file_type=self.creator.create_type("file_type")
+        self.creator.add_attribute(file_type,"filename",True,"filetype" if ARG_AUTOCOMPLETE_REPOSITORIES else "xs:string")
 
         pi_input=self.creator.create_block(p_init,"input")
-        pii_file=self.creator.create_block(pi_input,"file")
-        self.creator.add_attribute(pii_file,"filename",True,"filetype" if ARG_AUTOCOMPLETE_REPOSITORIES else "xs:string")
+        pii_file=self.creator.create_block(pi_input,"file","file_type")
 
-        p_eval=self.creator.create_block(self.pipeline,"eval",True)
+        multifile=self.creator.create_block(pi_input,"multifile")
+        self.creator.add_attribute(multifile,"name",True)
+        piim_file=self.creator.create_block(multifile,"file","file_type")
+
+        #self.creator.add_attribute(pii_file,"filename",True,"filetype" if ARG_AUTOCOMPLETE_REPOSITORIES else "xs:string")
+
+        p_eval=self.creator.create_block(self.pipeline,"eval",None,True)
 
         p_output=self.creator.create_block(self.pipeline,"output")
         self.creator.add_attribute(p_output,"repository")
@@ -129,7 +142,7 @@ def xget_parameters(xml):
         required = xget_b(param,"required",False)
         type_signature = xget(param,"type","string",True)
         description = xget(param,"description","")
-        tool_type=create_type(type_signature,default_value,required)
+        tool_type=create_type(type_signature,default_value,required,param)
         params[id]=(id,output,tool_type,type_signature,description)
     return params
 
@@ -144,7 +157,7 @@ def trim_text(text):
         result+="%s\n"%line.replace(prefix,"",1)
     return result
 
-def create_type(type_signature,default_value,required):
+def create_type(type_signature,default_value,required,xml_param):
     if type_signature=="bool":
         return BoolValue(default_value,required)
     elif type_signature=="string":
@@ -181,6 +194,8 @@ def create_type(type_signature,default_value,required):
             type_signature=type_signature.replace(all,"")
             m = re.search(enum_pattern,type_signature)
         return result_type
+    elif type_signature=="multifile":
+        return MultiFileValue(required)
     else:
         raise AttributeError("Unknown type:%s" % type_signature)
 
@@ -236,21 +251,44 @@ class Converter:
             id,output,tool_type,type_signature,description=self.params[key]
             tool_type.reset()
 
-    def execute(self,counter,temp_folder,in_file,xml_data,file_history,executions):
+    def execute(self,counter,temp_folder,input_data,xml_data,file_history,executions):
+        input_type,name,input=input_data
+
         self.reset_params()
         id,output,tool_type,type_signature,description=self.params["in"]
-        tool_type.set(in_file)
+        tool_type.set(input)
 
-        filename, file_extension = os.path.splitext(file_history[0])
-        file_extension=file_extension[1:]
-        filename_without_folder = os.path.basename(filename)
-        if self.tool_out_ext:
-            file_extension=self.tool_out_ext
-
-        out_file = "%s%s-%s-%s.%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name(),filename_without_folder,file_extension)
-        
         id,output,tool_type,type_signature,description=self.params["out"]
-        tool_type.set(out_file)
+
+        if input_type==INPUT_TYPE_SINGLEFILE:
+            filename, file_extension = os.path.splitext(file_history[0])
+            file_extension=file_extension[1:]
+            filename_without_folder = os.path.basename(filename)
+            if self.tool_out_ext:
+                file_extension=self.tool_out_ext
+
+            out_file = "%s%s-%s-%s.%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name(),filename_without_folder,file_extension)
+            output_type=INPUT_TYPE_SINGLEFILE
+        else:
+            file_extension=self.tool_out_ext
+            ttype=type(tool_type)
+            if ttype==FileValue:
+                out_file = "%s%s-%s-%s.%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name(),name,file_extension)
+                tool_type.set(out_file)
+                output_type=INPUT_TYPE_SINGLEFILE
+            elif ttype==MultiFileValue:
+                output_type=INPUT_TYPE_MULTIFILE
+
+                # for filename in input:
+                #     filename, file_extension = os.path.splitext(file_history[0])
+                #     file_extension=file_extension[1:]
+                #     filename_without_folder = os.path.basename(filename)
+                #     if self.tool_out_ext:
+                #         file_extension=self.tool_out_ext
+
+                #     out_file = "%s%s-%s-%s.%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name(),filename_without_folder,file_extension)
+                # TODO
+                pass
 
         for attrib in xml_data.attrib:
             if attrib in self.params:
@@ -283,7 +321,7 @@ class Converter:
         file_history.append(out_file)
 
 
-        return retcode,out_file,file_extension
+        return retcode,output_type,out_file,file_extension
         
         
 
@@ -450,15 +488,7 @@ class FileRepository:
         repo=m.group(1)
         return repo,all
 
-class InputFile:
-    def __init__(self,relative_part,repo):
-        self.repo=repo
-        self.relative_part=relative_part.replace("%s://"%repo,"")
 
-    def retrieve(self,context):
-        repo = context.get_repository(self.repo)
-        file = repo.get_file(self.relative_part)
-        return file
 
 
 class Context:
@@ -504,8 +534,21 @@ class Context:
         if tag=="file":
             filename = xgetrequired(xml_input,"filename")
             repo_name,all = FileRepository.get_repo_from_file(filename)
-            input_file = InputFile(filename,repo_name).retrieve(self)
-            return (repo_name,input_file)
+            input_file = InputFile(self,filename,repo_name).retrieve()
+            return (INPUT_TYPE_SINGLEFILE,repo_name,input_file)
+        elif tag=="multifile":
+            multifile_name=xgetrequired(xml_input,"name")
+            result=[]
+            for xml_file in xml_input:
+                tag=xml_file.tag.lower().replace(XMLR,"")
+                if tag!="file":
+                    raise AttributeError("Invalid element in multifile:%s\n%s"%(tag,ElementTree.tostring(xml_file)))
+                
+                filename = xgetrequired(xml_file,"filename")
+                repo_name,all = FileRepository.get_repo_from_file(filename)
+                input_file = InputFile(self,filename,repo_name).retrieve()
+                result.append((repo_name,input_file))
+            return (INPUT_TYPE_MULTIFILE,multifile_name,result)
         else:
             raise AttributeError("Unknown input-type:%s" % tag)
 
@@ -563,30 +606,47 @@ class Context:
         
         command_counter=1
         for _input in xml_input:
-            repo_name,input_filename = self.retrieve_input(_input)
-            shared_locals["repo_name"]=repo_name
             
-            file_history=[input_filename]
-            execution_calls.append("\nInput-File:%s" %input_filename)
+            input_type,name,input = input_data = self.retrieve_input(_input)
+            if input_type==INPUT_TYPE_SINGLEFILE:
+                shared_locals["init-input_type"]="single_file"
+                shared_locals["init-repo_name"]=name
+                
+                file_history=[input]
+                execution_calls.append("\nInput-File:%s" %input)
 
-            shared_locals["init-full-filename"]=input_filename
-            in_file = os.path.basename(input_filename)
-            filename_wo_ext, file_extension = os.path.splitext(in_file)
-            file_extension=file_extension[1:]
-            shared_locals["init-filename"]=in_file
-            shared_locals["init-file-wo-ext"]=filename_wo_ext
-            shared_locals["init-file-ext"]=file_extension
+                shared_locals["init-full-filename"]=input
+                in_file = os.path.basename(input)
+                filename_wo_ext, file_extension = os.path.splitext(in_file)
+                file_extension=file_extension[1:]
+                shared_locals["init-filename"]=in_file
+                shared_locals["init-file-wo-ext"]=filename_wo_ext
+                shared_locals["init-file-ext"]=file_extension
+            elif input_type==INPUT_TYPE_MULTIFILE:
+                file_history=[input]
+                shared_locals["init-input-type"]="multi_file"
+                shared_locals["init-mf-name"]=name
+                shared_locals["init-mf-files"]=input
+            else:
+                raise AttributeError("Unknown input_type:%s [%s]" % (input_type,ElementTree.tostring(_input)))
+
 
             # execute pipeline for every input
             for _command in xml_pipeline:
                 command = copy.deepcopy(_command)
-                shared_locals["full-filename"]=input_filename
-                in_file = os.path.basename(input_filename)
-                filename_wo_ext, file_extension = os.path.splitext(in_file)
-                file_extension=file_extension[1:]
-                shared_locals["filename"]=in_file
-                shared_locals["file-wo-ext"]=filename_wo_ext
-                shared_locals["file-ext"]=file_extension
+                if input_type==INPUT_TYPE_SINGLEFILE:
+                    shared_locals["full-filename"]=input
+                    in_file = os.path.basename(input)
+                    filename_wo_ext, file_extension = os.path.splitext(in_file)
+                    file_extension=file_extension[1:]
+                    shared_locals["filename"]=in_file
+                    shared_locals["file-wo-ext"]=filename_wo_ext
+                    shared_locals["file-ext"]=file_extension
+                else:
+                    shared_locals["input-type"]="multi_file"
+                    shared_locals["mf-name"]=name
+                    shared_locals["mf-files"]=input
+
 
                 tag = command.tag.lower().replace(XMLR,"")
                 if tag=="init":
@@ -596,7 +656,7 @@ class Context:
                 converter = Converter.get(tag)
                 if converter:
                     self.resolve_attribute_variables(command,shared_locals)
-                    result,input_filename,file_extension = converter.execute(command_counter,pipeline_folder,input_filename,command,file_history,execution_calls)
+                    result,input_type,input,file_extension = converter.execute(command_counter,pipeline_folder,input_data,command,file_history,execution_calls)
                     command_counter+=1
                     shared_locals["file-ext"]=file_extension
                     if result!=0:
@@ -608,7 +668,7 @@ class Context:
                     execution_calls.append("eval start:\n%s\neval end:------" % ev_str)
                 ## OUTPUT / COPY ##
                 elif tag=="output":
-                    repo_name=xget(command,"repository","cwd")
+                    name=xget(command,"repository","cwd")
                     filename=xgetrequired(command,"filename")
                     target_before=target
                     target=xget(command,"target",target)
@@ -616,10 +676,10 @@ class Context:
 
                     filename=self.resolve_variables_in_string(filename,shared_locals)
 
-                    repo = self.get_repository(repo_name)
-                    repo.write_file(input_filename,filename)
+                    repo = self.get_repository(name)
+                    repo.write_file(input,filename)
                     
-                    execution_calls.append("output:%s => [%s]:%s" % (input_filename,repo_name,filename))
+                    execution_calls.append("output:%s => [%s]:%s" % (input,name,filename))
                     target=target_before
                     shared_locals["target"]=target                    
                 else:
@@ -704,6 +764,7 @@ def startup():
     parse_tools(xml)
 
     ctx.run()
+        
 
     if ARG_GENERATE_XSD:
         XSDManager.get().xsdcreator_write("plugins/tpruntime.xsd")

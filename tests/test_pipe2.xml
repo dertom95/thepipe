@@ -1,0 +1,32 @@
+<main xmlns="https://tp-runtime.com" xsi:schemaLocation="https://tp-runtime.com ../plugins/tpruntime.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <repositories>
+        <file-repository name="fs1" folder="/home/ttrocha/_dev/projects/python/thepipeline">
+            <filter extension="jpg|png|wav|mp3"/>
+        </file-repository>
+
+        <file-repository name="humble" folder="/home/ttrocha/nas-big1/media/2d/humble-stuff">
+            <filter extension="jpg|png|wav|mp3"/>
+        </file-repository>
+    </repositories>
+
+    <pipeline pl-name="sprites">
+        <init>
+            <input>  
+                <multifile name="sheep01"> 
+                    <file filename="humble://2dgameartbundle/Cartoon Sheep/PNG/Cartoon Sheep - 01/PNG Sequences/Dying/32x32/Dying_000.png"/>
+                    <file filename="humble://2dgameartbundle/Cartoon Sheep/PNG/Cartoon Sheep - 01/PNG Sequences/Dying/32x32/Dying_002.png"/>
+                    <file filename="humble://2dgameartbundle/Cartoon Sheep/PNG/Cartoon Sheep - 01/PNG Sequences/Dying/32x32/Dying_004.png"/>
+                    <file filename="humble://2dgameartbundle/Cartoon Sheep/PNG/Cartoon Sheep - 01/PNG Sequences/Dying/32x32/Dying_006.png"/>
+                </multifile>
+                <multifile name="sheep02"> 
+                    <file filename="humble://2dgameartbundle/Cartoon Sheep/PNG/Cartoon Sheep - 01/PNG Sequences/Dying/32x32/Dying_004.png"/>
+                    <file filename="humble://2dgameartbundle/Cartoon Sheep/PNG/Cartoon Sheep - 01/PNG Sequences/Dying/32x32/Dying_006.png"/>
+                </multifile>
+            </input>
+        </init>
+        <ic-urho-spritepacker/> 
+
+        <output repository="fs1" filename="export/@[target]/spritesheets/@[init-mf-name].@[file-ext]" />
+    </pipeline>
+
+</main>

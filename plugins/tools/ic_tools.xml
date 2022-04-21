@@ -3,4 +3,7 @@
         <command host="linux" file="/usr/bin/convert" />
         <command host="win" file="@/tools/win/ic/convert.exe" />
     </tool>
+    <tool id="spritepacker" type="cli">
+        <command host="linux" file="@/tools/linux/ic/SpritePacker"/>
+    </tool>
 </thepipeline> 

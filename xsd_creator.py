@@ -79,7 +79,7 @@ class XSDCreator:
         attribs.appendChild(xml_attrib)
         return current_block        
 
-    def create_block(self,current_block,elem_name,allow_content=False):
+    def create_block(self,current_block,elem_name,type_name=None,allow_content=False):
         if not current_block:
             xml_current=self.xml_root
         else:
@@ -89,6 +89,10 @@ class XSDCreator:
 
         xml_current.appendChild(xml_elem)
         xml_current = xml_elem
+
+        if type_name:
+            xml_elem.setAttribute("type",type_name)
+            return xml_current,None
 
         xml_complex = self.xml_doc.createElement("xs:complexType")
         if allow_content:
@@ -104,6 +108,24 @@ class XSDCreator:
         xml_subblocks = xml_choice
 
         return xml_complex,xml_subblocks
+
+    def create_type(self,type_name,allow_content=False):
+        xml_complex = self.xml_doc.createElement("xs:complexType")
+        xml_complex.setAttribute("name",type_name)
+        
+        if allow_content:
+            xml_complex.setAttribute("mixed","true")
+            
+        self.xml_root.appendChild(xml_complex)
+
+        xml_choice = self.xml_doc.createElement("xs:choice")
+        xml_choice.setAttribute("minOccurs","0")
+        xml_choice.setAttribute("maxOccurs","unbounded")
+        xml_complex.appendChild(xml_choice)
+        xml_subblocks = xml_choice
+
+        return xml_complex,xml_subblocks        
+
 
     def to_string(self):
         xsd_result = self.xml_doc.toprettyxml()

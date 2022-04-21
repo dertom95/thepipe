@@ -1,6 +1,17 @@
 import re,os
 from xsd_creator import XSDCreator
 
+class InputFile:
+    def __init__(self,context,relative_part,repo):
+        self.context=context
+        self.repo=repo
+        self.relative_part=relative_part.replace("%s://"%repo,"")
+
+    def retrieve(self):
+        repo = self.context.get_repository(self.repo)
+        file = repo.get_file(self.relative_part)
+        return file
+
 class NumberValue:
     def __init__(self,default_value=16,min=0,max=float("inf"),required=False,is_integer=True):
         self.is_integer=is_integer
@@ -89,7 +100,39 @@ class FileValue:
     def put_xsd(self,creator,block,blockname,name):
         creator.add_attribute(block,name,self.required)        
 
-    def get(self,value):
+    def get(self):
+        return self.value
+
+    def reset(self):
+        self.value=None
+        self.is_set=False        
+
+    def value_set(self):
+        return self.is_set
+
+    def escape(self,filename):
+        return "'%s'"%filename
+
+    def output(self,template):
+        return template.replace("@",self.escape(self.value))
+
+class MultiFileValue:
+    def __init__(self,required=False):
+        self.is_set=False
+        self.value=None
+        self.required=required
+
+    def set(self,values):
+        result=[]
+        for val in values:
+            file=FileValue()
+            file.set(val[1])
+            result.append(file)
+
+        self.is_set=True
+        self.value=result
+
+    def get(self):
         return self.value
 
     def reset(self):
@@ -100,7 +143,11 @@ class FileValue:
         return self.is_set
 
     def output(self,template):
-        return template.replace("@",self.value)
+        result=""
+        for f in self.value:
+            result+=f.output("@ ")
+        return template.replace("@",result)
+    
 
 
 class StringValue:

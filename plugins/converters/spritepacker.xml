@@ -1,0 +1,15 @@
+<thepipeline  xmlns="https://thepipeline.com" xsi:schemaLocation="https://thepipeline.com ../xsd/thepipeline.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <converter prefix="ic" name="urho-spritepacker">
+        <parameters>
+            <param id="in" output="@" type="multifile"/>
+            <param id="out" output="@" type="file"/>
+            <param id="padding" output="-px @[0] -py @[1]" type="vec[2]" description="Adds x/y pixels of padding per image to width" />
+            <param id="offset"  output="-ox @[0] -oy @[1]" type="vec[2]" description="Adds x/y pixels to the horizontal position per image"/>
+            <param id="frame"   output="-frameWidth @[0] -frameHeight @[1]" type="vec[2]" description="Sets a fixed width/height for image and centers within frame"/>
+            <param id="trim"    output="-trim" type="bool" description="Trims excess transparent space from individual images offsets by frame size"/>
+            <param id="xmlfile" output="-xml @[0]" type="file" description="Generates an SpriteSheet xml file at path"/>
+            <param id="debug"   output="-debug" type="bool" description="Draws allocation boxes on sprite"/>
+        </parameters> 
+        <command toolid="spritepacker" arguments="@@ @[in] @[out]" extension="png"/>
+    </converter>
+</thepipeline>
