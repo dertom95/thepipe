@@ -7,16 +7,19 @@
         <file-repository name="humble" folder="/home/ttrocha/nas-big1/media/2d/humble-stuff">
             <filter extension="jpg|png|wav|mp3"/>
         </file-repository>
+        <file-repository name="sheep" folder="/home/ttrocha/nas-big1/media/2d/humble-stuff/2dgameartbundle/Cartoon Sheep/PNG/Cartoon Sheep - 01/PNG Sequences"/>
     </repositories>
 
     <pipeline pl-name="sprites">
         <init>
             <input>  
-                <multifile name="sheep01"> 
-                    <file filename="humble://2dgameartbundle/Cartoon Sheep/PNG/Cartoon Sheep - 01/PNG Sequences/Dying/32x32/Dying_000.png"/>
-                    <file filename="humble://2dgameartbundle/Cartoon Sheep/PNG/Cartoon Sheep - 01/PNG Sequences/Dying/32x32/Dying_002.png"/>
-                    <file filename="humble://2dgameartbundle/Cartoon Sheep/PNG/Cartoon Sheep - 01/PNG Sequences/Dying/32x32/Dying_004.png"/>
-                    <file filename="humble://2dgameartbundle/Cartoon Sheep/PNG/Cartoon Sheep - 01/PNG Sequences/Dying/32x32/Dying_006.png"/>
+                <multifile name="sheep01-dying"> 
+                    <file filename="sheep://Dying/Dying_000.png"/>
+                    <file filename="sheep://Dying/Dying_001.png"/>
+                    <file filename="sheep://Dying/Dying_002.png"/>
+                    <file filename="sheep://Dying/Dying_003.png"/>
+                    <file filename="sheep://Dying/Dying_004.png"/>
+                    <file filename="sheep://Dying/Dying_005.png"/>
                 </multifile>
                 <multifile name="sheep02"> 
                     <file filename="humble://2dgameartbundle/Cartoon Sheep/PNG/Cartoon Sheep - 01/PNG Sequences/Dying/32x32/Dying_004.png"/>
@@ -24,6 +27,7 @@
                 </multifile>
             </input>
         </init>
+        <ic-rescale forcescale="64x64"/>
         <ic-urho-spritepacker/> 
 
         <output repository="fs1" filename="export/@[target]/spritesheets/@[init-mf-name].@[file-ext]" />

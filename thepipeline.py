@@ -253,11 +253,34 @@ class Converter:
             tool_type.reset()
 
     def execute(self,context_data,counter,temp_folder,input_data,xml_data,file_history,executions):
+        self.reset_params()
         context,shared_locals=context_data
         input_type,name,input=input_data
-
-        self.reset_params()
         id,output,tool_type,type_signature,description=self.params["in"]
+
+        if input_type==INPUT_TYPE_MULTIFILE and type(tool_type)==FileValue:
+            # multifiles on single-file converter. unfold and call this execute for each file inside of multifile
+            output_files=[]
+
+            output_result = 0
+            output_metafiles = []
+
+            for m_repo,m_file in input:
+                xml_data_clone=copy.deepcopy(xml_data)
+                single_inputdata=(INPUT_TYPE_SINGLEFILE,m_repo,m_file)
+                result,input_type,input,file_extension,_metafiles = self.execute(context_data,counter,temp_folder,single_inputdata,xml_data_clone,[m_file],executions)
+                if result!=0:
+                    output_result=result
+                output_files.append((m_repo,input))
+                
+                if _metafiles:
+                    _metafiles=context.resolve_variables_in_string(_metafiles,shared_locals)
+                    for mf in _metafiles.split(','):
+                        if mf not in output_metafiles:
+                            output_metafiles.append(mf) 
+            
+            return output_result,INPUT_TYPE_MULTIFILE,output_files,file_extension,output_metafiles
+
         tool_type.set(input)
 
         id,output,tool_type,type_signature,description=self.params["out"]
@@ -270,6 +293,7 @@ class Converter:
                 file_extension=self.tool_out_ext
 
             out_file = "%s%s-%s-%s.%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name(),filename_without_folder,file_extension)
+            tool_type.set(out_file)
             output_type=INPUT_TYPE_SINGLEFILE
         else:
             file_extension=self.tool_out_ext
@@ -648,6 +672,7 @@ class Context:
                     shared_locals["file-wo-ext"]=filename_wo_ext
                     shared_locals["file-ext"]=file_extension
                 else:
+                    input_data=(input_type,name,input)
                     shared_locals["input-type"]="multi_file"
                     shared_locals["mf-name"]=name
                     shared_locals["mf-files"]=input
@@ -662,11 +687,15 @@ class Context:
                 if converter:
                     self.resolve_attribute_variables(command,shared_locals)
                     result,input_type,input,file_extension,_metafiles = converter.execute((self,shared_locals),command_counter,pipeline_folder,input_data,command,file_history,execution_calls)
-                    if _metafiles:
-                        _metafiles=self.resolve_variables_in_string(_metafiles,shared_locals)
-                        for mf in _metafiles.split(','):
-                            if mf not in metafiles:
-                                metafiles.append(mf)
+                    if input_type==INPUT_TYPE_SINGLEFILE:
+                        if _metafiles:
+                            _metafiles=self.resolve_variables_in_string(_metafiles,shared_locals)
+                            for mf in _metafiles.split(','):
+                                if mf not in metafiles:
+                                    metafiles.append(mf)
+                        else:
+                            metafiles=_metafiles
+                            
 
                     command_counter+=1
                     shared_locals["file-ext"]=file_extension

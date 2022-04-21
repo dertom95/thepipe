@@ -6,7 +6,7 @@
             <param id="colors" output="-colors @" type="number[0-255]" required="true" description="amount of colors" />
             <param id="dither" output="+dither||" type="bool" description="dither result"/>
         </parameters> 
-        <command toolid="convert" arguments="'@[in]' @@ '@[out]'" extension="png"/>
+        <command toolid="convert" arguments="@[in] @@ @[out]" extension="png"/>
     </converter>
     <converter name="rescale" prefix="ic">
         <parameters>
@@ -15,6 +15,6 @@
             <param id="scale" output="-resize @[0]x@[1]" type="vec[2]" />
             <param id="forcescale" output="-resize @[0]x@[1]!" type="vec[2]" />
         </parameters>
-        <command arguments="'@[in]' @@ '@[out]'" toolid="convert" />
+        <command arguments="@[in] @@ @[out]" toolid="convert" />
     </converter>
 </thepipeline>
