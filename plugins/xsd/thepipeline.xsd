@@ -78,6 +78,7 @@
 								<xs:complexType>
 									<xs:attribute name="arguments" type="xs:string" use="required"/>
 									<xs:attribute name="extension" type="xs:string"/>
+									<xs:attribute name="metafiles" type="xs:string"/>
 									<xs:attribute name="toolid" type="xs:string" use="required"/>
 								</xs:complexType>
 							</xs:element>

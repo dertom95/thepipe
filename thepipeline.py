@@ -227,6 +227,7 @@ class Converter:
         self.tool_id = xgetrequired(cmd,"toolid")
         self.tool_args = xgetrequired(cmd,"arguments")
         self.tool_out_ext = xget(cmd,"extension",None)
+        self.metafiles = xget(cmd,"metafiles",None)
 
         self.params = xget_parameters(xml)
         if ARG_GENERATE_XSD:
@@ -251,7 +252,8 @@ class Converter:
             id,output,tool_type,type_signature,description=self.params[key]
             tool_type.reset()
 
-    def execute(self,counter,temp_folder,input_data,xml_data,file_history,executions):
+    def execute(self,context_data,counter,temp_folder,input_data,xml_data,file_history,executions):
+        context,shared_locals=context_data
         input_type,name,input=input_data
 
         self.reset_params()
@@ -312,7 +314,9 @@ class Converter:
             else:
                 arguments=arguments.replace("@@","%s @@" % param_output)
 
+        arguments=context.resolve_variables_in_string(arguments,shared_locals)
         arguments=arguments.replace("@@","")
+
 
         # let the Tool do the execution(!)
         retcode,execution_call = tool.execute(arguments)
@@ -320,8 +324,7 @@ class Converter:
 
         file_history.append(out_file)
 
-
-        return retcode,output_type,out_file,file_extension
+        return retcode,output_type,out_file,file_extension,self.metafiles
         
         
 
@@ -590,6 +593,7 @@ class Context:
             pass
 
         shared_locals["target"]=target
+        shared_locals["temp-folder"]=pipeline_folder
 
         init=xml_pipeline.find("%sinit"%XMLR)
         if init is None:
@@ -607,6 +611,7 @@ class Context:
         command_counter=1
         for _input in xml_input:
             
+            metafiles=[]
             input_type,name,input = input_data = self.retrieve_input(_input)
             if input_type==INPUT_TYPE_SINGLEFILE:
                 shared_locals["init-input_type"]="single_file"
@@ -656,7 +661,13 @@ class Context:
                 converter = Converter.get(tag)
                 if converter:
                     self.resolve_attribute_variables(command,shared_locals)
-                    result,input_type,input,file_extension = converter.execute(command_counter,pipeline_folder,input_data,command,file_history,execution_calls)
+                    result,input_type,input,file_extension,_metafiles = converter.execute((self,shared_locals),command_counter,pipeline_folder,input_data,command,file_history,execution_calls)
+                    if _metafiles:
+                        _metafiles=self.resolve_variables_in_string(_metafiles,shared_locals)
+                        for mf in _metafiles.split(','):
+                            if mf not in metafiles:
+                                metafiles.append(mf)
+
                     command_counter+=1
                     shared_locals["file-ext"]=file_extension
                     if result!=0:
@@ -672,13 +683,20 @@ class Context:
                     filename=xgetrequired(command,"filename")
                     target_before=target
                     target=xget(command,"target",target)
+                    copy_metafiles=xget_b(command,"copy_metafiles",True)
+
                     shared_locals["target"]=target
 
                     filename=self.resolve_variables_in_string(filename,shared_locals)
 
                     repo = self.get_repository(name)
                     repo.write_file(input,filename)
-                    
+                    if copy_metafiles:
+                        folder=os.path.dirname(filename)
+                        for mf in metafiles:
+                            filename="%s/%s" % (folder,os.path.basename(mf))
+                            repo.write_file(mf,filename)
+
                     execution_calls.append("output:%s => [%s]:%s" % (input,name,filename))
                     target=target_before
                     shared_locals["target"]=target                    
