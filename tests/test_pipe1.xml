@@ -35,7 +35,7 @@
         </eval>  
 
         <output repository="fs1" filename="export/@[target]/converted-@[init-file-wo-ext].@[file-ext]" />
-        <ic-rescale forcescale="@[scalex]x@[scaley]"/>
+        <ic-rescale forcescale-xy="@[scalex]x@[scaley]"/>
         <output repository="fs1" target="all" filename="export/@[target]/converted-@[init-file-wo-ext]-@[scalex]_@[scaley].@[file-ext]" />
         <eval>
             scalex*=2

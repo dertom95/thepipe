@@ -1,5 +1,5 @@
 <thepipeline  xmlns="https://thepipeline.com" xsi:schemaLocation="https://thepipeline.com ../xsd/thepipeline.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-    <converter prefix="ic" name="indexed">
+    <converter prefix="ic" name="indexed"> 
         <parameters>
             <param id="in" output="@" type="file"/>
             <param id="out" output="@" type="file"/>
@@ -12,8 +12,10 @@
         <parameters>
             <param id="in" output="@" type="file"/>
             <param id="out" output="@" type="file"/>
-            <param id="scale" output="-resize @[0]x@[1]" type="vec[2]" />
-            <param id="forcescale" output="-resize @[0]x@[1]!" type="vec[2]" />
+            <param id="scale-xy" output="-resize @[0]x@[1]" type="vec[2]" />
+            <param id="forcescale-xy" output="-resize @[0]x@[1]!" type="vec[2]" />
+            <param id="scale-percent" output="-resize @%" type="number[0-100]" />
+            <param id="forcescale-percent" output="-resize @%" type="number[0-100]" />
         </parameters>
         <command arguments="@[in] @@ @[out]" toolid="convert" />
     </converter>

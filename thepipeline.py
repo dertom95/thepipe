@@ -286,7 +286,7 @@ class Converter:
         id,output,tool_type,type_signature,description=self.params["out"]
 
         if input_type==INPUT_TYPE_SINGLEFILE:
-            filename, file_extension = os.path.splitext(file_history[0])
+            filename, file_extension = os.path.splitext(input)
             file_extension=file_extension[1:]
             filename_without_folder = os.path.basename(filename)
             if self.tool_out_ext:
@@ -663,6 +663,7 @@ class Context:
             # execute pipeline for every input
             for _command in xml_pipeline:
                 command = copy.deepcopy(_command)
+                input_data=(input_type,name,input)
                 if input_type==INPUT_TYPE_SINGLEFILE:
                     shared_locals["full-filename"]=input
                     in_file = os.path.basename(input)
@@ -672,7 +673,6 @@ class Context:
                     shared_locals["file-wo-ext"]=filename_wo_ext
                     shared_locals["file-ext"]=file_extension
                 else:
-                    input_data=(input_type,name,input)
                     shared_locals["input-type"]="multi_file"
                     shared_locals["mf-name"]=name
                     shared_locals["mf-files"]=input
@@ -693,8 +693,10 @@ class Context:
                             for mf in _metafiles.split(','):
                                 if mf not in metafiles:
                                     metafiles.append(mf)
-                        else:
-                            metafiles=_metafiles
+                    else:
+                        for mf in _metafiles:
+                            if mf not in metafiles:
+                                metafiles.append(mf)
                             
 
                     command_counter+=1
@@ -720,7 +722,7 @@ class Context:
 
                     repo = self.get_repository(name)
                     repo.write_file(input,filename)
-                    if copy_metafiles:
+                    if copy_metafiles and metafiles:
                         folder=os.path.dirname(filename)
                         for mf in metafiles:
                             filename="%s/%s" % (folder,os.path.basename(mf))
@@ -810,7 +812,10 @@ def startup():
     xml = load_plugins()
     parse_tools(xml)
 
-    ctx.run()
+    try:
+        ctx.run()
+    except Exception as e:
+        print(e)
         
 
     if ARG_GENERATE_XSD:

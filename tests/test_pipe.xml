@@ -21,7 +21,6 @@
         <ic-psx-tim vram-pos="320x0" clut-pos="0x490" />
 
         <output file="@[fs1]/[target]/[folder]/[name]"/>
-
     </pipeline>
 
 </main>

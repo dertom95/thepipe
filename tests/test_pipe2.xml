@@ -1,12 +1,6 @@
 <main xmlns="https://tp-runtime.com" xsi:schemaLocation="https://tp-runtime.com ../plugins/tpruntime.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <repositories>
-        <file-repository name="fs1" folder="/home/ttrocha/_dev/projects/python/thepipeline">
-            <filter extension="jpg|png|wav|mp3"/>
-        </file-repository>
-
-        <file-repository name="humble" folder="/home/ttrocha/nas-big1/media/2d/humble-stuff">
-            <filter extension="jpg|png|wav|mp3"/>
-        </file-repository>
+        <file-repository name="fs1" folder="/home/ttrocha/_dev/projects/python/thepipeline"/>
         <file-repository name="sheep" folder="/home/ttrocha/nas-big1/media/2d/humble-stuff/2dgameartbundle/Cartoon Sheep/PNG/Cartoon Sheep - 01/PNG Sequences"/>
     </repositories>
 
@@ -21,16 +15,32 @@
                     <file filename="sheep://Dying/Dying_004.png"/>
                     <file filename="sheep://Dying/Dying_005.png"/>
                 </multifile>
-                <multifile name="sheep02"> 
-                    <file filename="humble://2dgameartbundle/Cartoon Sheep/PNG/Cartoon Sheep - 01/PNG Sequences/Dying/32x32/Dying_004.png"/>
-                    <file filename="humble://2dgameartbundle/Cartoon Sheep/PNG/Cartoon Sheep - 01/PNG Sequences/Dying/32x32/Dying_006.png"/>
+                <multifile name="sheep01-running"> 
+                    <file filename="sheep://Running/Running_000.png"/>
+                    <file filename="sheep://Running/Running_001.png"/>
+                    <file filename="sheep://Running/Running_002.png"/>
+                    <file filename="sheep://Running/Running_003.png"/>
+                    <file filename="sheep://Running/Running_004.png"/>
+                    <file filename="sheep://Running/Running_005.png"/>
+                    <file filename="sheep://Running/Running_006.png"/>
+                    <file filename="sheep://Running/Running_007.png"/>
+                    <file filename="sheep://Running/Running_008.png"/>
+                    <file filename="sheep://Running/Running_009.png"/>
                 </multifile>
             </input>
         </init>
-        <ic-rescale forcescale="64x64"/>
+        <ic-rescale forcescale-xy="64x64"/>
         <ic-urho-spritepacker/> 
-
-        <output repository="fs1" filename="export/@[target]/spritesheets/@[init-mf-name].@[file-ext]" />
+        
+        <!-- desktop -->
+        <output target="desktop" repository="fs1" filename="export/@[target]/spritesheets/@[init-mf-name].@[file-ext]" />
+        
+        <!-- PSX -->
+        <ic-indexed colors="15" />
+        <ic-rescale scale-percent="50"/> 
+        <output target="psx" repository="fs1" filename="export/@[target]/spritesheets/4colors-@[init-mf-name].@[file-ext]" />
+        <ic-psx-tim bpp="4" vpos="320x0" cpos="490,0"/>
+        <output target="psx" repository="fs1" filename="export/@[target]/spritesheets/@[init-mf-name].@[file-ext]" />
     </pipeline>
 
 </main>
