@@ -157,6 +157,17 @@ def trim_text(text):
         result+="%s\n"%line.replace(prefix,"",1)
     return result
 
+def replace_special_characters(input):
+    quotes_pattern=r"''(.*?)''"
+    m=re.search(quotes_pattern,input)
+    while m:
+        replacement="\"%s\"" % m.group(1)
+        input = input.replace(m.group(0),replacement)
+        m=re.search(quotes_pattern,input)
+    return input
+
+
+
 def create_type(type_signature,default_value,required,xml_param):
     if type_signature=="bool":
         return BoolValue(default_value,required)
@@ -182,9 +193,12 @@ def create_type(type_signature,default_value,required,xml_param):
             raise AttributeError("Unknown number-signature:%s" % type_signature)
     elif type_signature=="file":
         return FileValue(required)
-    elif type_signature.startswith("enum"):
-        result_type = EnumValue(required)
-        enum_pattern=r"enum\[(([\w\d]+?)(,|\]))"
+    elif "enum" in type_signature:
+        strict=type_signature.startswith("strict-enum")
+        result_type = EnumValue(required,strict)
+#        enum_pattern=r"enum\[(([\w\d]+?)(,|\]))"
+        enum_pattern=r"enum\[((.+?)(,|\]))"
+        
         m = re.search(enum_pattern,type_signature)
         while m:
             all=m.group(1)
@@ -332,6 +346,8 @@ class Converter:
                 continue
             
             direct_tag = r"@[%s]"%id
+            output=replace_special_characters(output)
+
             param_output = tool_type.output(output)
             if direct_tag in arguments:
                 arguments=arguments.replace(direct_tag,param_output)
@@ -812,10 +828,13 @@ def startup():
     xml = load_plugins()
     parse_tools(xml)
 
-    try:
-        ctx.run()
-    except Exception as e:
-        print(e)
+
+    ctx.run()
+
+    # try:
+    #     ctx.run()
+    # except Exception as e:
+    #     print(e)
         
 
     if ARG_GENERATE_XSD:

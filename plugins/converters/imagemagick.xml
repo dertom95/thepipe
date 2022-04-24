@@ -4,7 +4,17 @@
             <param id="in" output="@" type="file"/>
             <param id="out" output="@" type="file"/>
             <param id="colors" output="-colors @" type="number[0-255]" required="true" description="amount of colors" />
-            <param id="dither" output="+dither||" type="bool" description="dither result"/>
+            <param id="dither" output="+dither" type="bool" description="dither result"/>
+        </parameters> 
+        <command toolid="convert" arguments="@[in] @@ @[out]" extension="png"/>
+    </converter>
+    <converter prefix="ic" name="rotate"> 
+        <parameters>
+            <param id="in" output="@" type="file"/>
+            <param id="out" output="@" type="file"/>
+            <param id="background" output="-background ''@''" type="enum[transparent,#rgb,#rrggbb,#rrggbbaa]" required="true"/>
+            <param id="degree-keepsize" output="-distort SRT @" type="number[0-255]" description="rotate image degrees" />
+            <param id="degree" output="-rotate @" type="number[0-255]" description="rotate image degrees" />
         </parameters> 
         <command toolid="convert" arguments="@[in] @@ @[out]" extension="png"/>
     </converter>

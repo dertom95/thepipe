@@ -181,16 +181,17 @@ class StringValue:
 
 
 class EnumValue:
-    def __init__(self,default_value,required=False):
+    def __init__(self,default_value,required=False,strict=False):
         self.is_set=False
         self.value=default_value
         self.required=required
         self.enum_values=[]
         self.default_value=default_value
+        self.strict=strict
 
     def put_xsd(self,creator,block,blockname,name):
         typename="%s_%stype"%(blockname,name)
-        creator.create_enum_type(typename,self.enum_values)
+        creator.create_enum_type(typename,self.enum_values,self.strict)
         creator.add_attribute(block,name,self.required,typename)        
 
     def add_enum_value(self,value):
@@ -202,7 +203,7 @@ class EnumValue:
     
     def set(self,value):
         self.is_set=True
-        if value in self.enum_values:
+        if value in self.enum_values or not self.strict:
             self.value=value
         else:
             raise AttributeError("Tried to set invalid enum-value:%s" % value)
