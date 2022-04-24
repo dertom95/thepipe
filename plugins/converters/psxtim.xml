@@ -6,7 +6,7 @@
             <param id="out" output="-o @" type="file"/>
             <param id="vpos" output="-org @[0] @[1]" type="vec[2]" description="Position of the texture in psx-vram"/>
             <param id="cpos" output="-plt @[0] @[1]" type="vec[2]" description="Position of the CLUT in the vram"/>
-            <param id="bpp" output="-bpp @" type="strict-enum[4,8,16,255]" description="bits per color-information"/>
+            <param id="bpp" output="-bpp @" type="strict-enum[4,8,16,24]" description="bits per color-information"/>
             <param id="alpha" output="-usealpha" type="bool" description="Use alpha"/> 
         </parameters>  
         <command toolid="img2tim" arguments="@@" extension="tim"/>

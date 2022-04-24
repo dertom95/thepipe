@@ -164,7 +164,7 @@ class StringValue:
         self.is_set=True
         self.value=value
 
-    def get(self,value):
+    def get(self):
         return self.value
 
     def reset(self):

@@ -56,6 +56,9 @@ class XSDManager:
         self.pipeline=self.creator.create_block(main,"pipeline")
         self.creator.add_attribute(self.pipeline,"pl-name",True)
         self.creator.add_attribute(self.pipeline,"target",False,"targettype")
+        
+        self.set_input = self.creator.create_block(self.pipeline,"set-input")
+        self.creator.add_attribute(self.set_input,"id",True)
 
         p_init=self.creator.create_block(self.pipeline,"init")
         pi_eval=self.creator.create_block(p_init,"eval",None,True)
@@ -146,6 +149,9 @@ def xget_parameters(xml):
         params[id]=(id,output,tool_type,type_signature,description)
     return params
 
+def create_parameter_tuple(id,output,tool_type,description):
+    return (id,output,tool_type,None,description)    
+
 def trim_text(text):
     prefix=None
     result=""
@@ -195,7 +201,7 @@ def create_type(type_signature,default_value,required,xml_param):
         return FileValue(required)
     elif "enum" in type_signature:
         strict=type_signature.startswith("strict-enum")
-        result_type = EnumValue(required,strict)
+        result_type = EnumValue(default_value,required,strict)
 #        enum_pattern=r"enum\[(([\w\d]+?)(,|\]))"
         enum_pattern=r"enum\[((.+?)(,|\]))"
         
@@ -244,6 +250,9 @@ class Converter:
         self.metafiles = xget(cmd,"metafiles",None)
 
         self.params = xget_parameters(xml)
+        id_param = create_parameter_tuple("id","",StringValue(""),"id to reference later in pipeline")
+        self.params["id"]=id_param
+
         if ARG_GENERATE_XSD:
             XSDManager.get().add_converter(self)
     
@@ -271,18 +280,23 @@ class Converter:
         context,shared_locals=context_data
         input_type,name,input=input_data
         id,output,tool_type,type_signature,description=self.params["in"]
-
+        
+        
         if input_type==INPUT_TYPE_MULTIFILE and type(tool_type)==FileValue:
             # multifiles on single-file converter. unfold and call this execute for each file inside of multifile
             output_files=[]
 
             output_result = 0
             output_metafiles = []
+            output_id = None
 
             for m_repo,m_file in input:
                 xml_data_clone=copy.deepcopy(xml_data)
                 single_inputdata=(INPUT_TYPE_SINGLEFILE,m_repo,m_file)
-                result,input_type,input,file_extension,_metafiles = self.execute(context_data,counter,temp_folder,single_inputdata,xml_data_clone,[m_file],executions)
+                id,result,input_type,input,file_extension,_metafiles = self.execute(context_data,counter,temp_folder,single_inputdata,xml_data_clone,[m_file],executions)
+                if id:
+                    output_id=id
+
                 if result!=0:
                     output_result=result
                 output_files.append((m_repo,input))
@@ -293,7 +307,7 @@ class Converter:
                         if mf not in output_metafiles:
                             output_metafiles.append(mf) 
             
-            return output_result,INPUT_TYPE_MULTIFILE,output_files,file_extension,output_metafiles
+            return output_id,output_result,INPUT_TYPE_MULTIFILE,output_files,file_extension,output_metafiles
 
         tool_type.set(input)
 
@@ -335,6 +349,11 @@ class Converter:
                 value = xml_data.attrib[attrib]
                 id,output,tool_type,type_signature,description=self.params[attrib]
                 tool_type.set(value)
+
+        _,_,id_value,_,_=self.params["id"]
+        converter_id = None
+        if id_value.value_set():
+            converter_id = id_value.get()                
         
         tool = Tool.get(self.tool_id)
 
@@ -364,7 +383,7 @@ class Converter:
 
         file_history.append(out_file)
 
-        return retcode,output_type,out_file,file_extension,self.metafiles
+        return converter_id,retcode,output_type,out_file,file_extension,self.metafiles
         
         
 
@@ -447,7 +466,7 @@ class Tool:
         return retcode,execution_command
 
 class FileRepository:
-    IGNORE_FOLDERS=["__pycache__",".venv",".vscode","temp",".git"]
+    IGNORE_FOLDERS=["__pycache__",".vvalueenv",".vscode","temp",".git"]
     def __init__(self,repo_name,folder):
         self.folder=folder
         self.name=repo_name
@@ -621,6 +640,7 @@ class Context:
         shared_locals=dict()
 
         execution_calls=[]
+        IDs = {}
 
         target = xget(xml_pipeline,"target","all")
 
@@ -702,7 +722,11 @@ class Context:
                 converter = Converter.get(tag)
                 if converter:
                     self.resolve_attribute_variables(command,shared_locals)
-                    result,input_type,input,file_extension,_metafiles = converter.execute((self,shared_locals),command_counter,pipeline_folder,input_data,command,file_history,execution_calls)
+                    id,result,input_type,input,file_extension,_metafiles = converter.execute((self,shared_locals),command_counter,pipeline_folder,input_data,command,file_history,execution_calls)
+                    
+                    if id:
+                        IDs[id]=(id,input_type,input,file_extension,_metafiles)
+                    
                     if input_type==INPUT_TYPE_SINGLEFILE:
                         if _metafiles:
                             _metafiles=self.resolve_variables_in_string(_metafiles,shared_locals)
@@ -746,7 +770,12 @@ class Context:
 
                     execution_calls.append("output:%s => [%s]:%s" % (input,name,filename))
                     target=target_before
-                    shared_locals["target"]=target                    
+                    shared_locals["target"]=target   
+                elif tag=="set-input":
+                    id=xgetrequired(command,"id")
+                    if id not in IDs:
+                        raise KeyError("SetInput: unknown ID:%s" % id)
+                    id,input_type,input,file_extension,_metafiles=IDs[id]
                 else:
                     raise AttributeError("Unknown pipeline-command:%s"%tag)
 

@@ -31,8 +31,11 @@
                 </multifile>
             </input>
         </init>
-        <ic-rescale forcescale-xy="64x64"/>
-        <ic-rotate degree-keepsize="45" background="#f00"/>
+        <!-- <for def="" while="" step="">
+            <ic-indexed/>
+        </for> -->
+        <ic-rescale id="rescaled" forcescale-xy="64x64"/>
+        <ic-rotate degree-keepsize="45" />
         <ic-urho-spritepacker/> 
         
         <!-- desktop -->
@@ -42,8 +45,11 @@
         <ic-rescale scale-percent="50"/> 
         <ic-indexed colors="15" /> 
         <output target="psx" repository="fs1" filename="export/@[target]/spritesheets/4colors-@[init-mf-name].@[file-ext]" />
-        <ic-psx-tim bpp="4" vpos="320x0" cpos="490,0"/>
+        <ic-psx-tim bpp="24" vpos="320x0" cpos="490,0"/>
         <output target="psx" repository="fs1" filename="export/@[target]/spritesheets/@[init-mf-name].@[file-ext]" />
+
+        <set-input id="rescaled" />
+        <ic-rescale forcescale-xy="128x128"/>
 
         
     </pipeline>

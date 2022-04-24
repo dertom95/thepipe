@@ -12,7 +12,7 @@
         <parameters>
             <param id="in" output="@" type="file"/>
             <param id="out" output="@" type="file"/>
-            <param id="background" output="-background ''@''" type="enum[transparent,#rgb,#rrggbb,#rrggbbaa]" required="true"/>
+            <param id="background" output="-background ''@'' -virtual-pixel ''background'' " type="enum[transparent,#rgb,#rrggbb,#rrggbbaa]"/>
             <param id="degree-keepsize" output="-distort SRT @" type="number[0-255]" description="rotate image degrees" />
             <param id="degree" output="-rotate @" type="number[0-255]" description="rotate image degrees" />
         </parameters> 
