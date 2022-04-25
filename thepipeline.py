@@ -29,7 +29,6 @@ else:
 
 class XSDManager:
     instance=None
-    files=[]
 
     def get():
         if not XSDManager.instance:
@@ -38,6 +37,9 @@ class XSDManager:
 
     def __init__(self):
         self.targets=[]
+        self.files=[]
+        self.ids=[]
+
         self.creator=XSDCreator("tp-runtime")      
 
         main=self.creator.create_block(None,"main")
@@ -58,14 +60,14 @@ class XSDManager:
         self.creator.add_attribute(self.pipeline,"target",False,"targettype")
         
         self.set_input = self.creator.create_block(self.pipeline,"set-input")
-        self.creator.add_attribute(self.set_input,"id",True)
+        self.creator.add_attribute(self.set_input,"id",True,"ids_enum")
 
         p_init=self.creator.create_block(self.pipeline,"init")
         pi_eval=self.creator.create_block(p_init,"eval",None,True)
 
         
         file_type=self.creator.create_type("file_type")
-        self.creator.add_attribute(file_type,"filename",True,"filetype" if ARG_AUTOCOMPLETE_REPOSITORIES else "xs:string")
+        self.creator.add_attribute(file_type,"filename",True,"files_enum" if ARG_AUTOCOMPLETE_REPOSITORIES else "xs:string")
 
         pi_input=self.creator.create_block(p_init,"input")
         pii_file=self.creator.create_block(pi_input,"file","file_type")
@@ -90,6 +92,10 @@ class XSDManager:
         if target_name not in self.targets:
             self.targets.append(target_name)
 
+    def add_id(self,id):
+        if id not in self.ids:
+            self.ids.append(id)
+
     def add_converter(self,converter):
         xsdconverter=self.creator.create_block(self.pipeline,converter.qualified_name())
         for (id,output,tool_type,type_signature,description) in converter.params.values():
@@ -101,7 +107,8 @@ class XSDManager:
 
     def xsdcreator_write(self,filename):
         self.creator.create_enum_type("targettype",self.targets)
-        self.creator.create_enum_type("filetype",self.files)
+        self.creator.create_enum_type("files_enum",self.files)
+        self.creator.create_enum_type("ids_enum",self.ids)
 
         result=self.creator.to_string()
         print(result)
@@ -726,6 +733,7 @@ class Context:
                     
                     if id:
                         IDs[id]=(id,input_type,input,file_extension,_metafiles)
+                        XSDManager.get().add_id(id)
                     
                     if input_type==INPUT_TYPE_SINGLEFILE:
                         if _metafiles:
