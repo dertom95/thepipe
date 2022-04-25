@@ -27,7 +27,8 @@ class NumberValue:
         self.is_set=False
 
     def put_xsd(self,creator,block,blockname,name):
-        creator.add_attribute(block,name,self.required,"xs:int" if self.is_integer else "xs:float")
+#        creator.add_attribute(block,name,self.required,"xs:int" if self.is_integer else "xs:float")
+        creator.add_attribute(block,name,self.required,"xs:string" if self.is_integer else "xs:float")
 
     def set(self,value):
         value=int(value) if self.is_integer else float(value)

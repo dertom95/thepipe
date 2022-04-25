@@ -58,32 +58,44 @@ class XSDManager:
         self.pipeline=self.creator.create_block(main,"pipeline")
         self.creator.add_attribute(self.pipeline,"pl-name",True)
         self.creator.add_attribute(self.pipeline,"target",False,"targettype")
-        
-        self.set_input = self.creator.create_block(self.pipeline,"set-input")
-        self.creator.add_attribute(self.set_input,"id",True,"ids_enum")
 
         p_init=self.creator.create_block(self.pipeline,"init")
         pi_eval=self.creator.create_block(p_init,"eval",None,True)
 
-        
         file_type=self.creator.create_type("file_type")
         self.creator.add_attribute(file_type,"filename",True,"files_enum" if ARG_AUTOCOMPLETE_REPOSITORIES else "xs:string")
 
         pi_input=self.creator.create_block(p_init,"input")
         pii_file=self.creator.create_block(pi_input,"file","file_type")
 
+
         multifile=self.creator.create_block(pi_input,"multifile")
         self.creator.add_attribute(multifile,"name",True)
         piim_file=self.creator.create_block(multifile,"file","file_type")
 
+        self.actions=self.creator.create_block(self.pipeline,"actions","actions_type")
+
+        self.actions_type=self.creator.create_type("actions_type")
+
+        self.set_input = self.creator.create_block(self.actions_type,"set-input")
+        self.creator.add_attribute(self.set_input,"id",True,"ids_enum")
+
         #self.creator.add_attribute(pii_file,"filename",True,"filetype" if ARG_AUTOCOMPLETE_REPOSITORIES else "xs:string")
 
-        p_eval=self.creator.create_block(self.pipeline,"eval",None,True)
+        p_eval=self.creator.create_block(self.actions_type,"eval",None,True)
 
-        p_output=self.creator.create_block(self.pipeline,"output")
+        p_output=self.creator.create_block(self.actions_type,"output")
         self.creator.add_attribute(p_output,"repository")
         self.creator.add_attribute(p_output,"target")
         self.creator.add_attribute(p_output,"filename",True)
+
+        loop = self.creator.create_block(self.actions_type,"loop")
+        self.creator.add_attribute(loop,"init")
+        self.creator.add_attribute(loop,"condition",True,"xs:string")
+        self.creator.add_attribute(loop,"step")
+        
+        loop_actions=self.creator.create_block(loop,"loop-actions","actions_type")
+
 
     def add_files(self,files):
         self.files.extend(files)
@@ -97,13 +109,11 @@ class XSDManager:
             self.ids.append(id)
 
     def add_converter(self,converter):
-        xsdconverter=self.creator.create_block(self.pipeline,converter.qualified_name())
+        xsdconverter=self.creator.create_block(self.actions_type,converter.qualified_name())
         for (id,output,tool_type,type_signature,description) in converter.params.values():
             if id=="in" or id=="out":
                 continue
             tool_type.put_xsd(self.creator,xsdconverter,converter.qualified_name(),id)
-        
-
 
     def xsdcreator_write(self,filename):
         self.creator.create_enum_type("targettype",self.targets)
@@ -123,6 +133,8 @@ def xgetrequired(xml,attrib):
         return xml.attrib[attrib]
     else:
         raise NameError("required attribute '%s' was not found in:\n%s" %(attrib,ElementTree.tostring(xml)))
+
+
 
 
 def xget(xml,attrib,default_value=None,to_lower=False):
@@ -704,88 +716,92 @@ class Context:
 
 
             # execute pipeline for every input
-            for _command in xml_pipeline:
-                command = copy.deepcopy(_command)
-                input_data=(input_type,name,input)
-                if input_type==INPUT_TYPE_SINGLEFILE:
-                    shared_locals["full-filename"]=input
-                    in_file = os.path.basename(input)
-                    filename_wo_ext, file_extension = os.path.splitext(in_file)
-                    file_extension=file_extension[1:]
-                    shared_locals["filename"]=in_file
-                    shared_locals["file-wo-ext"]=filename_wo_ext
-                    shared_locals["file-ext"]=file_extension
-                else:
-                    shared_locals["input-type"]="multi_file"
-                    shared_locals["mf-name"]=name
-                    shared_locals["mf-files"]=input
-
-
-                tag = command.tag.lower().replace(XMLR,"")
-                if tag=="init":
-                    continue
-
-                ## CONVERTER ##
-                converter = Converter.get(tag)
-                if converter:
-                    self.resolve_attribute_variables(command,shared_locals)
-                    id,result,input_type,input,file_extension,_metafiles = converter.execute((self,shared_locals),command_counter,pipeline_folder,input_data,command,file_history,execution_calls)
-                    
-                    if id:
-                        IDs[id]=(id,input_type,input,file_extension,_metafiles)
-                        XSDManager.get().add_id(id)
-                    
+            for action in xml_pipeline.iter("%sactions"%XMLR):
+                for _command in action:
+                    command = copy.deepcopy(_command)
+                    input_data=(input_type,name,input)
                     if input_type==INPUT_TYPE_SINGLEFILE:
-                        if _metafiles:
-                            _metafiles=self.resolve_variables_in_string(_metafiles,shared_locals)
-                            for mf in _metafiles.split(','):
+                        shared_locals["full-filename"]=input
+                        in_file = os.path.basename(input)
+                        filename_wo_ext, file_extension = os.path.splitext(in_file)
+                        file_extension=file_extension[1:]
+                        shared_locals["filename"]=in_file
+                        shared_locals["file-wo-ext"]=filename_wo_ext
+                        shared_locals["file-ext"]=file_extension
+                    else:
+                        shared_locals["input-type"]="multi_file"
+                        shared_locals["mf-name"]=name
+                        shared_locals["mf-files"]=input
+
+
+                    tag = command.tag.lower().replace(XMLR,"")
+                    if tag=="init":
+                        continue
+
+                    ## CONVERTER ##
+                    converter = Converter.get(tag)
+                    if converter:
+                        self.resolve_attribute_variables(command,shared_locals)
+                        id,result,input_type,input,file_extension,_metafiles = converter.execute((self,shared_locals),command_counter,pipeline_folder,input_data,command,file_history,execution_calls)
+                        
+                        if id:
+                            IDs[id]=(id,input_type,input,file_extension,_metafiles)
+                            XSDManager.get().add_id(id)
+                        
+                        if input_type==INPUT_TYPE_SINGLEFILE:
+                            if _metafiles:
+                                _metafiles=self.resolve_variables_in_string(_metafiles,shared_locals)
+                                for mf in _metafiles.split(','):
+                                    if mf not in metafiles:
+                                        metafiles.append(mf)
+                        else:
+                            for mf in _metafiles:
                                 if mf not in metafiles:
                                     metafiles.append(mf)
+                                
+
+                        command_counter+=1
+                        shared_locals["file-ext"]=file_extension
+                        if result!=0:
+                            raise AttributeError("command resulted in error!")
+                    ## PYTHON-EVAL ##
+                    elif tag=="eval":
+                        ev_str = trim_text(command.text)
+                        exec(ev_str,shared_globals,shared_locals)
+                        execution_calls.append("eval start:\n%s\neval end:------" % ev_str)
+                    ## OUTPUT / COPY ##
+                    elif tag=="output":
+                        name=xget(command,"repository","cwd")
+                        filename=xgetrequired(command,"filename")
+                        target_before=target
+                        target=xget(command,"target",target)
+                        copy_metafiles=xget_b(command,"copy_metafiles",True)
+
+                        shared_locals["target"]=target
+
+                        filename=self.resolve_variables_in_string(filename,shared_locals)
+
+                        repo = self.get_repository(name)
+                        repo.write_file(input,filename)
+                        if copy_metafiles and metafiles:
+                            folder=os.path.dirname(filename)
+                            for mf in metafiles:
+                                filename="%s/%s" % (folder,os.path.basename(mf))
+                                repo.write_file(mf,filename)
+
+                        execution_calls.append("output:%s => [%s]:%s" % (input,name,filename))
+                        target=target_before
+                        shared_locals["target"]=target   
+                    elif tag=="set-input":
+                        id=xgetrequired(command,"id")
+                        if id not in IDs:
+                            raise KeyError("SetInput: unknown ID:%s" % id)
+                        id,input_type,input,file_extension,_metafiles=IDs[id]
+                    elif tag=="loop":
+                        # TODO
+                        pass
                     else:
-                        for mf in _metafiles:
-                            if mf not in metafiles:
-                                metafiles.append(mf)
-                            
-
-                    command_counter+=1
-                    shared_locals["file-ext"]=file_extension
-                    if result!=0:
-                        raise AttributeError("command resulted in error!")
-                ## PYTHON-EVAL ##
-                elif tag=="eval":
-                    ev_str = trim_text(command.text)
-                    exec(ev_str,shared_globals,shared_locals)
-                    execution_calls.append("eval start:\n%s\neval end:------" % ev_str)
-                ## OUTPUT / COPY ##
-                elif tag=="output":
-                    name=xget(command,"repository","cwd")
-                    filename=xgetrequired(command,"filename")
-                    target_before=target
-                    target=xget(command,"target",target)
-                    copy_metafiles=xget_b(command,"copy_metafiles",True)
-
-                    shared_locals["target"]=target
-
-                    filename=self.resolve_variables_in_string(filename,shared_locals)
-
-                    repo = self.get_repository(name)
-                    repo.write_file(input,filename)
-                    if copy_metafiles and metafiles:
-                        folder=os.path.dirname(filename)
-                        for mf in metafiles:
-                            filename="%s/%s" % (folder,os.path.basename(mf))
-                            repo.write_file(mf,filename)
-
-                    execution_calls.append("output:%s => [%s]:%s" % (input,name,filename))
-                    target=target_before
-                    shared_locals["target"]=target   
-                elif tag=="set-input":
-                    id=xgetrequired(command,"id")
-                    if id not in IDs:
-                        raise KeyError("SetInput: unknown ID:%s" % id)
-                    id,input_type,input,file_extension,_metafiles=IDs[id]
-                else:
-                    raise AttributeError("Unknown pipeline-command:%s"%tag)
+                        raise AttributeError("Unknown pipeline-command:%s"%tag)
 
         execution_file = open("%s%s-exe-list.%s.txt" % (pipeline_folder,pipeline_name,time.time()),"w")
         execution_text = "\n".join(execution_calls)        
@@ -815,8 +831,9 @@ class Context:
                 
 
     def run(self):
-        for file in self.input_files:
-            self.execute_file(file)
+        if self.input_files:
+            for file in self.input_files:
+                self.execute_file(file)
 
 
 def namespace(element):
@@ -847,7 +864,7 @@ def parse_tools(xml_data):
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="thepipeline - universal assets processor")
-    parser.add_argument("--input",action="append",help="input xml-files", required=True)
+    parser.add_argument("--input",action="append",help="input xml-files")
     parser.add_argument("--keep-intermediate-files",type=bool,default=False,help="keep files generated during runtime")
     parser.add_argument("--autocomplete-repositories",type=bool,default=False,help="iterates over repositories for autocompletion")
     parser.add_argument("--autocomplete-repository-levels",type=int,default=2,help="folder depth to use")

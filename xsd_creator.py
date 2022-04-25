@@ -1,5 +1,14 @@
 from xml.dom import minidom
 
+def xml_sanity_check(xml:minidom.Element):
+    print("element:%s"%xml.tagName)
+    for attrName, attrValue in xml.attributes.items():
+        print("\t%s=%s" % (attrName,attrValue))
+        if attrValue is None:
+            a=0
+    for child in xml.childNodes:
+        xml_sanity_check(child)
+
 class XSDCreator:
     def __init__(self,xsd_name):
         self.enum_types={}
@@ -126,8 +135,9 @@ class XSDCreator:
 
         return xml_complex,xml_subblocks        
 
-
     def to_string(self):
+        xml_sanity_check(self.xml_root)
+
         xsd_result = self.xml_doc.toprettyxml()
         return xsd_result
 
