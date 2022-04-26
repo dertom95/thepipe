@@ -31,16 +31,8 @@
                 </multifile>
             </input>
         </init>
-        <!-- <for def="" condition="" step="">
-            <ic-indexed/> 
-        </for> -->
         <actions>
             <ic-rescale id="rescaled" forcescale-xy="64x64"/>
-            <loop init="degree=0" condition="degree!=360" step="degree+=5">
-                <loop-actions>
-                    <ic-rotate degree-keepsize="@[degree]" />
-                </loop-actions>
-            </loop>             
             <ic-urho-spritepacker/>
             
             <!-- desktop -->

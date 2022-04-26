@@ -1,0 +1,42 @@
+<main xmlns="https://tp-runtime.com" xsi:schemaLocation="https://tp-runtime.com ../plugins/tpruntime.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <repositories>
+        <file-repository name="fs1" folder="/home/ttrocha/_dev/projects/python/thepipeline">
+            <filter extension="png" />
+        </file-repository>
+        <file-repository name="sheep" folder="/home/ttrocha/nas-big1/media/2d/humble-stuff/2dgameartbundle/Cartoon Sheep/PNG/Cartoon Sheep - 01/PNG Sequences"/>
+    </repositories>
+
+    <pipeline pl-name="sprites">
+        <init>
+            <input>  
+                  <file filename="sheep://Running/Running_001.png"/>
+            </input>
+        </init>
+        <actions>
+            <ic-rescale id="rescaled" forcescale-xy="64x64"/>
+            <loop init="degree=0" condition="degree!=360" step="degree+=45">
+                <loop-actions>
+                    <ic-rotate degree-keepsize="@[degree]" />
+                    <output target="desktop" repository="fs1" filename="export/rots/@[target]/@[init-file-wo-ext]-@[degree].@[file-ext]"  /> 
+                </loop-actions>
+            </loop>             
+
+            <!-- <output target="desktop" repository="fs1" filename="export/@[target]/spritesheets/@[init-mf-name].@[file-ext]"  />
+            
+            
+            <ic-rescale scale-percent="50"/> 
+            <ic-indexed colors="15" /> 
+            <output target="psx" repository="fs1" filename="export/@[target]/spritesheets/4colors-@[init-mf-name].@[file-ext]" />
+            <ic-psx-tim bpp="24" vpos="320x0" cpos="490,0"/>
+            <output target="psx" repository="fs1" filename="export/@[target]/spritesheets/@[init-mf-name].@[file-ext]" />
+    
+            <set-input id="rescaled" />
+            <ic-rescale forcescale-xy="128x128"/> -->
+
+    
+        </actions>
+
+        
+    </pipeline>
+
+</main>

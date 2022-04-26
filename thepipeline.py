@@ -654,10 +654,24 @@ class Context:
             resolved = self.resolve_variables_in_string(xml.attrib[attrib],shared_locals)
             xml.attrib[attrib]=resolved
 
-    def execute_commands(self,ctx,commands_iterator):
-            command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,target,pipeline_name,pipeline_folder,file_history=ctx
+    def check_condition(shared_locals,condition):
+        result = eval(condition,shared_locals)
+        return result
+
+    def execute_commands(self,ctx,xml,iter_expression):
+            block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,target,pipeline_name,pipeline_folder,file_history=ctx
             # execute pipeline for every input
-            for action in commands_iterator:
+            first_iteration=True
+
+            # TODO: do the block need this information?
+            if block_data:
+                if block_data[0]=="loop":
+                    type,loop_init,loop_condition,loop_step=block_data
+                else:
+                    raise AttributeError("Unknown blocktype:%s" % block_data[0])
+            old_pipeline_folder=pipeline_folder
+
+            for action in xml.iter(iter_expression):
                 for _command in action:
                     command = copy.deepcopy(_command)
                     input_data=(input_type,name,input)
@@ -740,11 +754,30 @@ class Context:
                         id,input_type,input,file_extension,_metafiles=IDs[id]
                     elif tag=="loop":
                         init = xget(command,"init",None)
-                        
-                        
+                        condition = xgetrequired(command,"condition")
+                        step = xget(command,"step",None)
+
+                        loop_data=("loop",init,condition,step)
+
+                        if init:
+                            lines=init.replace(';','\n')
+                            exec(lines,shared_locals)
+                        while Context.check_condition(shared_locals,condition):
+                            loop_folder = "%sloop.%s/"%(old_pipeline_folder,command_counter)
+                            try:
+                                os.makedirs(loop_folder)
+                            except:
+                                pass
+                            loop_ctx = (loop_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,target,pipeline_name,loop_folder,file_history)
+                            self.execute_commands(loop_ctx,command,"%sloop-actions"%XMLR)
+                            if step:
+                                lines=step.replace(';','\ņ')
+                                exec(lines,shared_locals)
+                            command_counter+=1
                     else:
                         raise AttributeError("Unknown pipeline-command:%s"%tag)
 
+            return (block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,target,pipeline_name,old_pipeline_folder,file_history)
     
     def execute_pipeline(self,xml_pipeline):
         shared_globals=dict()
@@ -805,8 +838,14 @@ class Context:
             else:
                 raise AttributeError("Unknown input_type:%s [%s]" % (input_type,ElementTree.tostring(_input)))
 
-            pipeline_context = (command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,target,pipeline_name,pipeline_folder,file_history)
-            self.execute_commands(pipeline_context,xml_pipeline.iter("%sactions"%XMLR))
+            block_data = None
+            pipeline_context = (block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,target,pipeline_name,pipeline_folder,file_history)
+            
+            # execution command
+            execution_ctx = self.execute_commands(pipeline_context,xml_pipeline,"%sactions"%XMLR)
+            
+            # unfold data from execution
+            # block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,target,pipeline_name,pipeline_folder,file_history=execution_ctx
 
         execution_file = open("%s%s-exe-list.%s.txt" % (pipeline_folder,pipeline_name,time.time()),"w")
         execution_text = "\n".join(execution_calls)        
