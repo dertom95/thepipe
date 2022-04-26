@@ -14,7 +14,7 @@
         </init>
         <actions>
             <ic-rescale id="rescaled" forcescale-xy="64x64"/>
-            <loop init="degree=0" condition="degree!=360" step="degree+=45">
+            <loop init="degree=0" condition="lower_equal(degree,360)" step="degree+=45">
                 <loop-actions>
                     <ic-rotate degree-keepsize="@[degree]" />
                     <output target="desktop" repository="fs1" filename="export/rots/@[target]/@[init-file-wo-ext]-@[degree].@[file-ext]"  /> 

@@ -336,17 +336,26 @@ class Converter:
             filename, file_extension = os.path.splitext(input)
             file_extension=file_extension[1:]
             filename_without_folder = os.path.basename(filename)
+            if "___" in filename_without_folder:
+                splits = filename_without_folder.split("___")
+                filename_without_folder = splits[1]
             if self.tool_out_ext:
                 file_extension=self.tool_out_ext
 
-            out_file = "%s%s-%s-%s.%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name(),filename_without_folder,file_extension)
+            out_file = "%s%s-%s___%s.%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name(),filename_without_folder,file_extension)
             tool_type.set(out_file)
             output_type=INPUT_TYPE_SINGLEFILE
         else:
             file_extension=self.tool_out_ext
             ttype=type(tool_type)
+
+            name_orig = name
+            if "___" in name:
+                splits = name.split("___")
+                name_orig=splits[1]
+                
             if ttype==FileValue:
-                out_file = "%s%s-%s-%s.%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name(),name,file_extension)
+                out_file = "%s%s-%s___%s.%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name(),name_orig,file_extension)
                 tool_type.set(out_file)
                 output_type=INPUT_TYPE_SINGLEFILE
             elif ttype==MultiFileValue:
@@ -361,7 +370,7 @@ class Converter:
 
                 #     out_file = "%s%s-%s-%s.%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name(),filename_without_folder,file_extension)
                 # TODO
-                pass
+                raise AttributeError("Output multifile here not supported,yet")
 
         for attrib in xml_data.attrib:
             if attrib in self.params:
@@ -779,9 +788,24 @@ class Context:
 
             return (block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,target,pipeline_name,old_pipeline_folder,file_history)
     
+    def init_funcs(self,shared_data):
+        # TODO make this a dedicated script
+        exec(""" 
+def lower(a,b):
+    return a<b
+def greater(a,b):
+    return a>b        
+def lower_equal(a,b):
+    return a<=b
+def greater_equal(a,b):
+    return a>=b        
+        """,shared_data)
+
     def execute_pipeline(self,xml_pipeline):
         shared_globals=dict()
         shared_locals=dict()
+
+        self.init_funcs(shared_locals)
 
         execution_calls=[]
         IDs = {}
