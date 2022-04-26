@@ -654,69 +654,10 @@ class Context:
             resolved = self.resolve_variables_in_string(xml.attrib[attrib],shared_locals)
             xml.attrib[attrib]=resolved
 
-    def execute_pipeline(self,xml_pipeline):
-        shared_globals=dict()
-        shared_locals=dict()
-
-        execution_calls=[]
-        IDs = {}
-
-        target = xget(xml_pipeline,"target","all")
-
-        pipeline_name = xgetrequired(xml_pipeline,"pl-name")
-
-        pipeline_folder = "temp/%s%s/" % (pipeline_name,time.time())
-        try:
-            os.makedirs(pipeline_folder)
-        except:
-            pass
-
-        shared_locals["target"]=target
-        shared_locals["temp-folder"]=pipeline_folder
-
-        init=xml_pipeline.find("%sinit"%XMLR)
-        if init is None:
-            raise AttributeError("Pipeline without init:\n%s" % ElementTree.tostring(xml_pipeline))
-
-        for ev in init.iter("%seval"%XMLR):
-            ev_str = trim_text(ev.text)
-            exec(ev_str,shared_globals,shared_locals)
-            execution_calls.append("eval start:\n%s\neval end:------" % ev_str)
-
-        xml_input=init.find("%sinput"%XMLR)
-        if xml_input is None:
-            raise AttributeError("Pipeline.Init without <input/>\n%s" % ElementTree.tostring(xml_pipeline))
-        
-        command_counter=1
-        for _input in xml_input:
-            
-            metafiles=[]
-            input_type,name,input = input_data = self.retrieve_input(_input)
-            if input_type==INPUT_TYPE_SINGLEFILE:
-                shared_locals["init-input_type"]="single_file"
-                shared_locals["init-repo_name"]=name
-                
-                file_history=[input]
-                execution_calls.append("\nInput-File:%s" %input)
-
-                shared_locals["init-full-filename"]=input
-                in_file = os.path.basename(input)
-                filename_wo_ext, file_extension = os.path.splitext(in_file)
-                file_extension=file_extension[1:]
-                shared_locals["init-filename"]=in_file
-                shared_locals["init-file-wo-ext"]=filename_wo_ext
-                shared_locals["init-file-ext"]=file_extension
-            elif input_type==INPUT_TYPE_MULTIFILE:
-                file_history=[input]
-                shared_locals["init-input-type"]="multi_file"
-                shared_locals["init-mf-name"]=name
-                shared_locals["init-mf-files"]=input
-            else:
-                raise AttributeError("Unknown input_type:%s [%s]" % (input_type,ElementTree.tostring(_input)))
-
-
+    def execute_commands(self,ctx,commands_iterator):
+            command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,target,pipeline_name,pipeline_folder,file_history=ctx
             # execute pipeline for every input
-            for action in xml_pipeline.iter("%sactions"%XMLR):
+            for action in commands_iterator:
                 for _command in action:
                     command = copy.deepcopy(_command)
                     input_data=(input_type,name,input)
@@ -798,10 +739,74 @@ class Context:
                             raise KeyError("SetInput: unknown ID:%s" % id)
                         id,input_type,input,file_extension,_metafiles=IDs[id]
                     elif tag=="loop":
-                        # TODO
-                        pass
+                        init = xget(command,"init",None)
+                        
+                        
                     else:
                         raise AttributeError("Unknown pipeline-command:%s"%tag)
+
+    
+    def execute_pipeline(self,xml_pipeline):
+        shared_globals=dict()
+        shared_locals=dict()
+
+        execution_calls=[]
+        IDs = {}
+
+        target = xget(xml_pipeline,"target","all")
+
+        pipeline_name = xgetrequired(xml_pipeline,"pl-name")
+
+        pipeline_folder = "temp/%s%s/" % (pipeline_name,time.time())
+        try:
+            os.makedirs(pipeline_folder)
+        except:
+            pass
+
+        shared_locals["target"]=target
+        shared_locals["temp-folder"]=pipeline_folder
+
+        init=xml_pipeline.find("%sinit"%XMLR)
+        if init is None:
+            raise AttributeError("Pipeline without init:\n%s" % ElementTree.tostring(xml_pipeline))
+
+        for ev in init.iter("%seval"%XMLR):
+            ev_str = trim_text(ev.text)
+            exec(ev_str,shared_globals,shared_locals)
+            execution_calls.append("eval start:\n%s\neval end:------" % ev_str)
+
+        xml_input=init.find("%sinput"%XMLR)
+        if xml_input is None:
+            raise AttributeError("Pipeline.Init without <input/>\n%s" % ElementTree.tostring(xml_pipeline))
+        
+        command_counter=1
+        for _input in xml_input:
+            metafiles=[]
+            input_type,name,input = input_data = self.retrieve_input(_input)
+            if input_type==INPUT_TYPE_SINGLEFILE:
+                shared_locals["init-input_type"]="single_file"
+                shared_locals["init-repo_name"]=name
+                
+                file_history=[input]
+                execution_calls.append("\nInput-File:%s" %input)
+
+                shared_locals["init-full-filename"]=input
+                in_file = os.path.basename(input)
+                filename_wo_ext, file_extension = os.path.splitext(in_file)
+                file_extension=file_extension[1:]
+                shared_locals["init-filename"]=in_file
+                shared_locals["init-file-wo-ext"]=filename_wo_ext
+                shared_locals["init-file-ext"]=file_extension
+            elif input_type==INPUT_TYPE_MULTIFILE:
+                file_history=[input]
+                shared_locals["init-input-type"]="multi_file"
+                shared_locals["init-mf-name"]=name
+                shared_locals["init-mf-files"]=input
+            else:
+                raise AttributeError("Unknown input_type:%s [%s]" % (input_type,ElementTree.tostring(_input)))
+
+            pipeline_context = (command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,target,pipeline_name,pipeline_folder,file_history)
+            self.execute_commands(pipeline_context,xml_pipeline.iter("%sactions"%XMLR))
 
         execution_file = open("%s%s-exe-list.%s.txt" % (pipeline_folder,pipeline_name,time.time()),"w")
         execution_text = "\n".join(execution_calls)        
