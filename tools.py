@@ -7,10 +7,14 @@ class InputFile:
         self.repo=repo
         self.relative_part=relative_part.replace("%s://"%repo,"")
 
-    def retrieve(self):
+    def retrieve(self,resolve_glob=False):
         repo = self.context.get_repository(self.repo)
-        file = repo.get_file(self.relative_part)
-        return file
+        if resolve_glob:
+            files = repo.get_file(self.relative_part,True,True)
+            return files
+        else:
+            file = repo.get_file(self.relative_part)
+            return file
 
 class NumberValue:
     def __init__(self,default_value=16,min=0,max=float("inf"),required=False,is_integer=True):

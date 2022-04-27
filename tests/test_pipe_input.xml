@@ -1,0 +1,26 @@
+<main xmlns="https://tp-runtime.com" xsi:schemaLocation="https://tp-runtime.com ../plugins/tpruntime.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <repositories>
+        <file-repository name="fs1" folder="/home/ttrocha/_dev/projects/python/thepipeline">
+            <filter extension="png" />
+        </file-repository>
+        <file-repository name="sheep" folder="/home/ttrocha/nas-big1/media/2d/humble-stuff/2dgameartbundle/Cartoon Sheep/PNG/Cartoon Sheep - 01/PNG Sequences"/>
+    </repositories>
+
+    <pipeline pl-name="sprites">
+        <init>
+            <input>
+                <multifile name="sheep_dying">
+                    <file filename="sheep://Dying/Dying_*.png" />
+                </multifile>  
+            </input>
+        </init>
+        <actions>
+            <ic-rescale forcescale-xy="80x80"/>
+            <ic-urho-spritepacker />
+            <output target="spritesheet" repository="fs1" filename="export/@[target]/@[init-mf-name].@[file-ext]" />
+        </actions>
+
+        
+    </pipeline>
+
+</main>

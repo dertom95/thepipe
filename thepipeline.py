@@ -1,6 +1,5 @@
-from inspect import Attribute
 import re,argparse,os,time
-import shutil,copy
+import shutil,copy,glob
 
 from sys import platform
 from pathlib import Path
@@ -516,18 +515,26 @@ class FileRepository:
         self.name=repo_name
         self.filters=[]
     
-    def get_file(self,input):
+    def get_file(self,input,resolve_pattern=False,keep_repo_prefix=False):
         # repo,all=FileRepository.get_repo_from_file(input)
         # if repo!=self.name:
         #     raise AttributeError("FileRepo[%s]. Tried to locate file from other filerepo!:%s" % (self.folder,input))
 
         # input = input.replace(all,"")
-
         filename="%s/%s" % (self.folder,input)
-        if not os.path.exists(filename):
-            raise AttributeError("FileRepo[%s]. Could not locate file:%s" % (self.folder,input))
+        if not resolve_pattern:
+            if not os.path.exists(filename):
+                raise AttributeError("FileRepo[%s]. Could not locate file:%s" % (self.folder,input))
 
-        return os.path.abspath(filename)
+            return os.path.abspath(filename)
+        else:
+            filenames = sorted(glob.glob(filename))
+            if keep_repo_prefix:
+                for i in range(len(filenames)):
+                    filenames[i]=filenames[i].replace(self.folder,"%s:/"%self.name)
+            return filenames
+
+
 
     def add_filter(self,folder_filter,filename_filter,extension_filter):
         def filter(folder,filename,extension):
@@ -608,6 +615,20 @@ class Context:
         ARG_GENERATE_XSD = args.generate_xsd
 
         self.repositories={}
+
+    def input_resolver(self,input_xml,output_xml):
+        for ie in input_xml:
+            if ie.tag=="%sfile"%XMLR:
+                filename = xgetrequired(ie,"filename")
+                repo_name,all = FileRepository.get_repo_from_file(filename)
+                
+                input_files = InputFile(self,filename,repo_name).retrieve(True)
+                for input_file in input_files:
+                    xml_file = ElementTree.SubElement(output_xml,"%sfile"%XMLR,filename=input_file)
+            elif ie.tag=="%smultifile"%XMLR:
+                mf_name = xgetrequired(ie,"name")
+                multi_file=ElementTree.SubElement(output_xml,"%smultifile"%XMLR,name=mf_name)
+                self.input_resolver(ie,multi_file)
 
     def add_repository_from_xml(self,xml):
         name = xgetrequired(xml,"name")
@@ -900,9 +921,14 @@ def greater_equal(a,b):
         xml_input=init.find("%sinput"%XMLR)
         if xml_input is None:
             raise AttributeError("Pipeline.Init without <input/>\n%s" % ElementTree.tostring(xml_pipeline))
-        
-        command_counter=1
+
+        # resolve file-pattern first
+        resolved_input=ElementTree.SubElement(init,"%sinput"%XMLR)
         for _input in xml_input:
+            self.input_resolver(xml_input,resolved_input)
+
+        command_counter=1
+        for _input in resolved_input:
             metafiles=[]
             input_type,name,input = input_data = self.retrieve_input(_input)
             if input_type==INPUT_TYPE_SINGLEFILE:
