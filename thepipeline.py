@@ -99,8 +99,18 @@ class XSDManager:
         self.creator.add_attribute(loop,"init")
         self.creator.add_attribute(loop,"condition",True,"xs:string")
         self.creator.add_attribute(loop,"step")
-        
+
         loop_actions=self.creator.create_block(loop,"loop-actions","actions_type")
+
+        if_tag = self.creator.create_block(self.actions_type,"if")
+
+        on_tag = self.creator.create_block(if_tag,"on")
+        self.creator.add_attribute(on_tag,"condition",True)
+        self.creator.create_block(on_tag,"if-actions","actions_type")
+        
+        else_tag = self.creator.create_block(if_tag,"else")
+        self.creator.create_block(else_tag,"if-actions","actions_type")
+        
 
 
     def add_files(self,files):
@@ -680,10 +690,12 @@ class Context:
 
             # TODO: do the block need this information?
             if block_data:
+                # TODO: this data is not used.... remove soon?
                 if block_data[0]=="loop":
                     type,loop_init,loop_condition,loop_step=block_data
-                else:
-                    raise AttributeError("Unknown blocktype:%s" % block_data[0])
+                elif block_data[0]=="if":
+                    pass
+
             old_pipeline_folder=pipeline_folder
 
             for action in xml.iter(iter_expression):
@@ -784,11 +796,32 @@ class Context:
                             except:
                                 pass
                             loop_ctx = (loop_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,loop_folder,file_history)
-                            self.execute_commands(loop_ctx,command,"%sloop-actions"%XMLR)
+                            output_ctx = self.execute_commands(loop_ctx,command,"%sloop-actions"%XMLR)
+                            #TODO process output? at the moment you need to create output for loops via multifile-create and -add
                             if step:
                                 lines=step.replace(';','\ņ')
                                 exec(lines,shared_locals)
                             command_counter+=1
+                    elif tag=="if":
+                        found_valid_condition=False
+                        if_data=("if")
+                        for on_tag in command.iter("%son"%XMLR):
+                            condition=xgetrequired(on_tag,"condition")
+                            if Context.check_condition(shared_locals,condition):
+                                if_ctx = (if_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history)
+                                found_valid_condition=True
+                                output_context =  self.execute_commands(if_ctx,on_tag,"%sif-actions"%XMLR)
+                                if_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history=output_context
+                                break
+
+                        if not found_valid_condition:
+                            else_tag = command.find("%selse"%XMLR)
+                            if else_tag:
+                                if_ctx = (if_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history)
+                                found_valid_condition=True
+                                output_context = self.execute_commands(if_ctx,else_tag,"%sif-actions"%XMLR)
+                                if_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history=output_context
+
                     elif tag=="multifile-create":
                         multifile_id = xgetrequired(command,"id")
                         # TODO: what to do if this already exists?
