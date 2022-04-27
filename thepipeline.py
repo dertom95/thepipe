@@ -89,6 +89,12 @@ class XSDManager:
         self.creator.add_attribute(p_output,"target")
         self.creator.add_attribute(p_output,"filename",True)
 
+        p_multifile_create = self.creator.create_block(self.actions_type,"multifile-create")
+        self.creator.add_attribute(p_multifile_create,"id")
+
+        p_multifile_add = self.creator.create_block(self.actions_type,"multifile-add")
+        self.creator.add_attribute(p_multifile_add,"id")
+
         loop = self.creator.create_block(self.actions_type,"loop")
         self.creator.add_attribute(loop,"init")
         self.creator.add_attribute(loop,"condition",True,"xs:string")
@@ -668,7 +674,7 @@ class Context:
         return result
 
     def execute_commands(self,ctx,xml,iter_expression):
-            block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,target,pipeline_name,pipeline_folder,file_history=ctx
+            block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history=ctx
             # execute pipeline for every input
             first_iteration=True
 
@@ -777,16 +783,41 @@ class Context:
                                 os.makedirs(loop_folder)
                             except:
                                 pass
-                            loop_ctx = (loop_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,target,pipeline_name,loop_folder,file_history)
+                            loop_ctx = (loop_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,loop_folder,file_history)
                             self.execute_commands(loop_ctx,command,"%sloop-actions"%XMLR)
                             if step:
                                 lines=step.replace(';','\ņ')
                                 exec(lines,shared_locals)
                             command_counter+=1
+                    elif tag=="multifile-create":
+                        multifile_id = xgetrequired(command,"id")
+                        # TODO: what to do if this already exists?
+                        multifile = MultiFileValue()
+                        # TODO unify this?
+                        multifiles[multifile_id]=multifile
+                        IDs[multifile_id]=(multifile_id,INPUT_TYPE_MULTIFILE,[],file_extension,[])
+                    elif tag=="multifile-add":
+                        multifile_id = xgetrequired(command,"id")
+                        # TODO: what to do if this already exists?
+                        if multifile_id not in multifiles:
+                            raise KeyError("Unknown multifile-id: %s" % multifile_id)
+                        
+                        multifile = multifiles[multifile_id]
+                        # todo: metafiles
+                        mf_id,mf_input_type,mf_input,mf_file_extension,mf_metafiles=IDs[multifile_id]
+                        if input_type==INPUT_TYPE_SINGLEFILE:
+                            multifile.add_file(("cwd",input))
+                            mf_input.append(("cwd",input))
+                            a=0
+                        else:
+                            mf_input=mf_input+input
+
+
+
                     else:
                         raise AttributeError("Unknown pipeline-command:%s"%tag)
 
-            return (block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,target,pipeline_name,old_pipeline_folder,file_history)
+            return (block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,old_pipeline_folder,file_history)
     
     def init_funcs(self,shared_data):
         # TODO make this a dedicated script
@@ -809,6 +840,7 @@ def greater_equal(a,b):
 
         execution_calls=[]
         IDs = {}
+        multifiles={}
 
         target = xget(xml_pipeline,"target","all")
 
@@ -863,7 +895,7 @@ def greater_equal(a,b):
                 raise AttributeError("Unknown input_type:%s [%s]" % (input_type,ElementTree.tostring(_input)))
 
             block_data = None
-            pipeline_context = (block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,target,pipeline_name,pipeline_folder,file_history)
+            pipeline_context = (block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history)
             
             # execution command
             execution_ctx = self.execute_commands(pipeline_context,xml_pipeline,"%sactions"%XMLR)

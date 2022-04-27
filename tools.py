@@ -120,18 +120,20 @@ class FileValue:
 class MultiFileValue:
     def __init__(self,required=False):
         self.is_set=False
-        self.value=None
+        self.value=[]
         self.required=required
 
     def set(self,values):
-        result=[]
         for val in values:
-            file=FileValue()
-            file.set(val[1])
-            result.append(file)
+            self.add_file(val[1])
 
+    def add_file(self,file):
+        self.value = self.value or []
+        _file=FileValue()
+        _file.set(file)
+        self.value.append(_file)
         self.is_set=True
-        self.value=result
+        
 
     def get(self):
         return self.value

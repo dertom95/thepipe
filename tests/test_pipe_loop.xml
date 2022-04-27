@@ -14,12 +14,18 @@
         </init>
         <actions>
             <ic-rescale id="rescaled" forcescale-xy="64x64"/>
+            <multifile-create id="rotations"/>
             <loop init="degree=0" condition="lower_equal(degree,360)" step="degree+=45">
                 <loop-actions>
                     <ic-rotate degree-keepsize="@[degree]" />
+                    <multifile-add id="rotations"/>
                     <output target="desktop" repository="fs1" filename="export/rots/@[target]/@[init-file-wo-ext]-@[degree].@[file-ext]"  /> 
                 </loop-actions>
             </loop>             
+
+            <set-input id="rotations"/>
+            <ic-urho-spritepacker/>
+            <output target="desktop" repository="fs1" filename="export/rots/@[target]/@[init-file-wo-ext]-spritesheet.@[file-ext]"  /> 
 
             <!-- <output target="desktop" repository="fs1" filename="export/@[target]/spritesheets/@[init-mf-name].@[file-ext]"  />
             
