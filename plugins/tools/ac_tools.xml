@@ -1,0 +1,5 @@
+<thepipeline xmlns="https://thepipeline.com" xsi:schemaLocation="https://thepipeline.com ../xsd/thepipeline.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <tool id="ffmpeg" type="cli">
+        <command host="linux" file="/usr/bin/ffmpeg" />
+    </tool>
+</thepipeline> 

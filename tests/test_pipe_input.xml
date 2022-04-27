@@ -10,17 +10,21 @@
         <init>
             <input>
                 <multifile name="sheep_dying">
-                    <file filename="sheep://Dying/Dying_*.png" />
+                    <file filename="sheep://*/*.png" />
                 </multifile>  
             </input>
         </init>
         <actions>
-            <ic-rescale forcescale-xy="80x80"/>
-            <ic-urho-spritepacker />
+            <ic-rescale forcescale-xy="64x64"/>
+            <ic-urho-spritepacker frame="256x256" />
             <output target="spritesheet" repository="fs1" filename="export/@[target]/@[init-mf-name].@[file-ext]" />
+            <ic-rescale forcescale-percent="25"/>
+            <ic-indexed colors="15" />
+            <ic-psx-tim bpp="4"/>
+            <output target="psx-spritesheet" repository="fs1" filename="export/@[target]/@[init-mf-name].@[file-ext]" />
         </actions>
-
-        
     </pipeline>
+
+
 
 </main>

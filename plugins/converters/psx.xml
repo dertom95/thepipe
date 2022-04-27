@@ -11,4 +11,22 @@
         </parameters>  
         <command toolid="img2tim" arguments="@@" extension="tim"/>
     </converter>
+
+    <!-- ffmpeg -y -i raw/music/horn.wav -f s16le -ac 1 -ar 44100 tmp.dat -->
+    <converter prefix="ac" name="psx-wav-format" target="psx">
+        <parameters>
+            <param id="in" output="@" type="file"/>
+            <param id="out" output="@" type="file"/>
+        </parameters>
+        <command arguments="-y -i @[in] -f s16le -ac 1 -ar 44100 @[out]" toolid="ffmpeg" extension="wav"/>
+    </converter>
+
+    <!-- wav2vag tmp.dat vag/horn.vag -sraw16 -freq 44100 -->
+    <converter prefix="ac" name="psx-vag-format">
+        <parameters>
+            <param id="in" output="@" type="file"/>
+            <param id="out" output="@" type="file"/>
+        </parameters>
+        <command arguments="@[in] @[out] -sraw16 -freq 44100" toolid="wav2vag" extension="vag"/>
+    </converter>
 </thepipeline>

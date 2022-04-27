@@ -1,0 +1,310 @@
+<?xml version="1.0" ?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="https://tp-runtime.com" xmlns="https://tp-runtime.com" elementFormDefault="qualified">
+	<xs:element name="main">
+		<xs:complexType>
+			<xs:choice minOccurs="0" maxOccurs="unbounded">
+				<xs:element name="repositories">
+					<xs:complexType>
+						<xs:choice minOccurs="0" maxOccurs="unbounded">
+							<xs:element name="file-repository">
+								<xs:complexType>
+									<xs:choice minOccurs="0" maxOccurs="unbounded">
+										<xs:element name="filter">
+											<xs:complexType>
+												<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+												<xs:attribute name="extension" type="xs:string"/>
+											</xs:complexType>
+										</xs:element>
+									</xs:choice>
+									<xs:attribute name="name" type="xs:string" use="required"/>
+									<xs:attribute name="folder" type="xs:string" use="required"/>
+									<xs:attribute name="levels" type="xs:string"/>
+								</xs:complexType>
+							</xs:element>
+						</xs:choice>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="pipeline">
+					<xs:complexType>
+						<xs:choice minOccurs="0" maxOccurs="unbounded">
+							<xs:element name="init">
+								<xs:complexType>
+									<xs:choice minOccurs="0" maxOccurs="unbounded">
+										<xs:element name="eval">
+											<xs:complexType mixed="true">
+												<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+											</xs:complexType>
+										</xs:element>
+										<xs:element name="input">
+											<xs:complexType>
+												<xs:choice minOccurs="0" maxOccurs="unbounded">
+													<xs:element name="file" type="file_type"/>
+													<xs:element name="multifile">
+														<xs:complexType>
+															<xs:choice minOccurs="0" maxOccurs="unbounded">
+																<xs:element name="file" type="file_type"/>
+															</xs:choice>
+															<xs:attribute name="name" type="xs:string" use="required"/>
+														</xs:complexType>
+													</xs:element>
+												</xs:choice>
+											</xs:complexType>
+										</xs:element>
+									</xs:choice>
+								</xs:complexType>
+							</xs:element>
+							<xs:element name="actions" type="actions_type"/>
+						</xs:choice>
+						<xs:attribute name="pl-name" type="xs:string" use="required"/>
+						<xs:attribute name="target" type="targettype"/>
+					</xs:complexType>
+				</xs:element>
+			</xs:choice>
+			<xs:attribute name="target" type="xs:string"/>
+			<xs:attribute name="required" type="xs:string"/>
+		</xs:complexType>
+	</xs:element>
+	<xs:complexType name="file_type">
+		<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+		<xs:attribute name="filename" type="files_enum" use="required"/>
+	</xs:complexType>
+	<xs:complexType name="actions_type">
+		<xs:choice minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="set-input">
+				<xs:complexType>
+					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+					<xs:attribute name="id" type="ids_enum" use="required"/>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="eval">
+				<xs:complexType mixed="true">
+					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="output">
+				<xs:complexType>
+					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+					<xs:attribute name="repository" type="xs:string"/>
+					<xs:attribute name="target" type="xs:string"/>
+					<xs:attribute name="filename" type="xs:string" use="required"/>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="multifile-create">
+				<xs:complexType>
+					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+					<xs:attribute name="id" type="xs:string"/>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="multifile-add">
+				<xs:complexType>
+					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+					<xs:attribute name="id" type="xs:string"/>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="loop">
+				<xs:complexType>
+					<xs:choice minOccurs="0" maxOccurs="unbounded">
+						<xs:element name="loop-actions" type="actions_type"/>
+					</xs:choice>
+					<xs:attribute name="init" type="xs:string"/>
+					<xs:attribute name="condition" type="xs:string" use="required"/>
+					<xs:attribute name="step" type="xs:string"/>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="if">
+				<xs:complexType>
+					<xs:choice minOccurs="0" maxOccurs="unbounded">
+						<xs:element name="on">
+							<xs:complexType>
+								<xs:choice minOccurs="0" maxOccurs="unbounded">
+									<xs:element name="if-actions" type="actions_type"/>
+								</xs:choice>
+								<xs:attribute name="condition" type="xs:string" use="required"/>
+							</xs:complexType>
+						</xs:element>
+						<xs:element name="else">
+							<xs:complexType>
+								<xs:choice minOccurs="0" maxOccurs="unbounded">
+									<xs:element name="if-actions" type="actions_type"/>
+								</xs:choice>
+							</xs:complexType>
+						</xs:element>
+					</xs:choice>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="ic-urho-spritepacker">
+				<xs:complexType>
+					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+					<xs:attribute name="padding" type="vec2type"/>
+					<xs:attribute name="offset" type="vec2type"/>
+					<xs:attribute name="frame" type="vec2type"/>
+					<xs:attribute name="trim" type="booltype"/>
+					<xs:attribute name="debug" type="booltype"/>
+					<xs:attribute name="id" type="xs:string"/>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="ic-indexed">
+				<xs:complexType>
+					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+					<xs:attribute name="colors" type="xs:string" use="required"/>
+					<xs:attribute name="dither" type="booltype"/>
+					<xs:attribute name="id" type="xs:string"/>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="ic-rotate">
+				<xs:complexType>
+					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+					<xs:attribute name="background" type="ic-rotate_backgroundtype"/>
+					<xs:attribute name="degree-keepsize" type="xs:string"/>
+					<xs:attribute name="degree" type="xs:string"/>
+					<xs:attribute name="id" type="xs:string"/>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="ic-rescale">
+				<xs:complexType>
+					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+					<xs:attribute name="scale-xy" type="vec2type"/>
+					<xs:attribute name="forcescale-xy" type="vec2type"/>
+					<xs:attribute name="scale-percent" type="xs:string"/>
+					<xs:attribute name="forcescale-percent" type="xs:string"/>
+					<xs:attribute name="id" type="xs:string"/>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="ic-psx-tim">
+				<xs:complexType>
+					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+					<xs:attribute name="vpos" type="vec2type"/>
+					<xs:attribute name="cpos" type="vec2type"/>
+					<xs:attribute name="bpp" type="ic-psx-tim_bpptype"/>
+					<xs:attribute name="alpha" type="booltype"/>
+					<xs:attribute name="id" type="xs:string"/>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="ac-psx-wav-format">
+				<xs:complexType>
+					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+					<xs:attribute name="id" type="xs:string"/>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="ac-psx-vag-format">
+				<xs:complexType>
+					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+					<xs:attribute name="id" type="xs:string"/>
+				</xs:complexType>
+			</xs:element>
+		</xs:choice>
+	</xs:complexType>
+	<xs:simpleType name="vec2type" final="restriction">
+		<xs:union>
+			<xs:simpleType>
+				<xs:restriction base="xs:string"/>
+			</xs:simpleType>
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="VAL,VAL,VAL"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:union>
+	</xs:simpleType>
+	<xs:simpleType name="booltype" final="restriction">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="true"/>
+			<xs:enumeration value="false"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="ic-rotate_backgroundtype" final="restriction">
+		<xs:union>
+			<xs:simpleType>
+				<xs:restriction base="xs:string"/>
+			</xs:simpleType>
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="transparent"/>
+					<xs:enumeration value="#rgb"/>
+					<xs:enumeration value="#rrggbb"/>
+					<xs:enumeration value="#rrggbbaa"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:union>
+	</xs:simpleType>
+	<xs:simpleType name="ic-psx-tim_bpptype" final="restriction">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="4"/>
+			<xs:enumeration value="8"/>
+			<xs:enumeration value="16"/>
+			<xs:enumeration value="24"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="targettype" final="restriction">
+		<xs:union>
+			<xs:simpleType>
+				<xs:restriction base="xs:string"/>
+			</xs:simpleType>
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="psx"/>
+					<xs:enumeration value="all"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:union>
+	</xs:simpleType>
+	<xs:simpleType name="files_enum" final="restriction">
+		<xs:union>
+			<xs:simpleType>
+				<xs:restriction base="xs:string"/>
+			</xs:simpleType>
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="audio://cc0_485621__inspectorj__protesting-crowd-climate-strike-guildford-01-01.wav"/>
+					<xs:enumeration value="audio://cc0_375963__glitchedtones__spacecraft-hover-01.wav"/>
+					<xs:enumeration value="audio://cc_nc_419698__14fvaltrovat__short-horn.wav"/>
+					<xs:enumeration value="audio://ccby_marcel_farres_186104__marcel-farres__elevator.wav"/>
+					<xs:enumeration value="audio://547644__nielsvdb__rumbling-drone.wav"/>
+					<xs:enumeration value="audio://cc0_450755__florianreichelt__waves-of-hawaii.wav"/>
+					<xs:enumeration value="audio://336803__xzuma__world-trade-center-during-wind-storm.wav"/>
+					<xs:enumeration value="audio://cc0_burghRecords_463903__burghrecords__birds-in-spring-scotland.wav"/>
+					<xs:enumeration value="audio://336803__xzuma__world-trade-center-during-wind-storm.ogg"/>
+					<xs:enumeration value="audio://cc0_243373__johnsonbrandediting__small-crowd-pre-concert-talking-party-bar-walla-talking.mp3"/>
+					<xs:enumeration value="audio://336803__xzuma__world-trade-center-during-wind-storm.aiff"/>
+					<xs:enumeration value="cwd://activate_venv.sh"/>
+					<xs:enumeration value="cwd://todo.md"/>
+					<xs:enumeration value="cwd://map2.png"/>
+					<xs:enumeration value="cwd://xsd_creator.py"/>
+					<xs:enumeration value="cwd://map2.h"/>
+					<xs:enumeration value="cwd://thepipeline.py"/>
+					<xs:enumeration value="cwd://facial_expressions.jpg"/>
+					<xs:enumeration value="cwd://.gitigonre"/>
+					<xs:enumeration value="cwd://map2_2.png"/>
+					<xs:enumeration value="cwd://requirements.txt"/>
+					<xs:enumeration value="cwd://map2_4.png"/>
+					<xs:enumeration value="cwd://tools.py"/>
+					<xs:enumeration value="cwd://map2_24.png"/>
+					<xs:enumeration value="cwd://.venv/pyvenv.cfg"/>
+					<xs:enumeration value="cwd://tests/test_pipe1.xml"/>
+					<xs:enumeration value="cwd://tests/test_pipe.xml"/>
+					<xs:enumeration value="cwd://tests/xsd_test.xml"/>
+					<xs:enumeration value="cwd://tests/test_pipe_input.xml"/>
+					<xs:enumeration value="cwd://tests/test.xsd"/>
+					<xs:enumeration value="cwd://tests/test_pipe1.py"/>
+					<xs:enumeration value="cwd://tests/test_pipe_loop.xml"/>
+					<xs:enumeration value="cwd://tests/test_pipe2.xml"/>
+					<xs:enumeration value="cwd://tests/test_pipe_if.xml"/>
+					<xs:enumeration value="cwd://tests/test_pipe_audio.xml"/>
+					<xs:enumeration value="cwd://tests/test_tmx.py"/>
+					<xs:enumeration value="cwd://plugins/tpruntime copy.xsd"/>
+					<xs:enumeration value="cwd://plugins/tpruntime.xsd"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:union>
+	</xs:simpleType>
+	<xs:simpleType name="ids_enum" final="restriction">
+		<xs:union>
+			<xs:simpleType>
+				<xs:restriction base="xs:string"/>
+			</xs:simpleType>
+			<xs:simpleType>
+				<xs:restriction base="xs:string"/>
+			</xs:simpleType>
+		</xs:union>
+	</xs:simpleType>
+</xs:schema>
