@@ -31,6 +31,7 @@
 			</xs:simpleType>
 			<xs:simpleType>
 				<xs:restriction base="xs:string">
+					<xs:enumeration value="all"/>
 					<xs:enumeration value="linux"/>
 					<xs:enumeration value="linux-arm"/>
 					<xs:enumeration value="macos"/>
@@ -38,6 +39,12 @@
 				</xs:restriction>
 			</xs:simpleType>
 		</xs:union>
+	</xs:simpleType>
+	<xs:simpleType name="boolvalue" final="restriction">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="false"/>
+			<xs:enumeration value="true"/>
+		</xs:restriction>
 	</xs:simpleType>
 	<xs:simpleType name="paramtype" final="restriction">
 		<xs:union>
@@ -49,6 +56,7 @@
 					<xs:enumeration value="bool"/>
 					<xs:enumeration value="enum[]"/>
 					<xs:enumeration value="file"/>
+					<xs:enumeration value="string"/>
 					<xs:enumeration value="vec[2]"/>
 					<xs:enumeration value="vec[3]"/>
 				</xs:restriction>
@@ -88,6 +96,7 @@
 										<xs:element name="param">
 											<xs:complexType>
 												<xs:attribute name="description" type="xs:string"/>
+												<xs:attribute name="expose" type="boolvalue"/>
 												<xs:attribute name="id" type="xs:string" use="required"/>
 												<xs:attribute name="output" type="xs:string" use="required"/>
 												<xs:attribute name="required" type="booltype"/>
@@ -96,6 +105,7 @@
 										</xs:element>
 										<xs:element name="rip">
 											<xs:complexType>
+												<xs:attribute name="expose" type="boolvalue"/>
 												<xs:attribute name="required" type="booltype"/>
 												<xs:attribute name="type" type="paramtype" use="required"/>
 											</xs:complexType>
@@ -106,6 +116,7 @@
 						</xs:choice>
 						<xs:attribute name="name" type="xs:string" use="required"/>
 						<xs:attribute name="prefix" type="xs:string" use="required"/>
+						<xs:attribute name="standalone" type="boolvalue"/>
 						<xs:attribute name="target" type="targettype"/>
 					</xs:complexType>
 				</xs:element>
@@ -123,6 +134,7 @@
 									</xs:choice>
 									<xs:attribute name="file" type="xs:string"/>
 									<xs:attribute name="host" type="hosttype"/>
+									<xs:attribute name="wrapper" type="xs:string"/>
 								</xs:complexType>
 							</xs:element>
 						</xs:choice>

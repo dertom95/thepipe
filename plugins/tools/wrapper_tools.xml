@@ -1,0 +1,8 @@
+<thepipeline xmlns="https://thepipeline.com" xsi:schemaLocation="https://thepipeline.com ../xsd/thepipeline.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <tool id="wine" type="cli">
+        <command host="linux" file="/usr/bin/wine"/>
+    </tool>
+    <tool id="python" type="cli">
+        <command host="linux" file="/usr/bin/python3.8"/>
+    </tool>    
+</thepipeline> 

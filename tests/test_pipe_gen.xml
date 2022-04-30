@@ -1,0 +1,23 @@
+<main xmlns="https://tp-runtime.com" xsi:schemaLocation="https://tp-runtime.com ../plugins/tpruntime.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    
+
+    <pipeline pl-name="animation" target="psx">
+        <init>
+            <eval>
+                theid=1895
+            </eval>
+            <input>
+                <file filename="cwd://map2.h" />
+            </input>
+        </init>
+
+        <actions>
+            <gen-dtgen-xsd  config-file="cwd://plugins/xsd/gen/config.json"
+                            xsd-output-file="cwd://plugin/xsd/thepipeline.@[theid].xsd"
+                            xsd-schema-name="thepipeline"/>
+            
+        </actions>
+
+    </pipeline>
+
+</main>

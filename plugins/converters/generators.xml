@@ -1,0 +1,10 @@
+<thepipeline  xmlns="https://thepipeline.com" xsi:schemaLocation="https://thepipeline.com ../xsd/thepipeline.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <converter prefix="gen" name="dtgen-xsd" standalone="true">
+        <parameters>
+            <param id="config-file"  expose="true" output="--config-file @" type="file" />
+            <param id="xsd-output-file" expose="true" output="--xsd-output @" type="file" description="path to xsd output-file"/>
+            <param id="xsd-schema-name"  output="--xsd-schema-name @" type="string" description="name of the schema"/>
+        </parameters> 
+        <command toolid="dtgen" arguments="@@" extension="png" metafiles="@[param.xsd-output-file]"/>  
+    </converter>
+</thepipeline>

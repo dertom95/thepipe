@@ -1,18 +1,19 @@
 <?xml version="1.0"?>
 <thepipeline >
 /*block:converter*/    
-    <converter prefix="/*name:prefix|required*/ic/*endname*/" name="/*name:name|required*/psx-tim/*endname*/" target="/*name:target|enum:psx,targettype*/psx/*endname*/">
+    <converter prefix="/*name:prefix|required*/ic/*endname*/" name="/*name:name|required*/psx-tim/*endname*/" target="/*name:target|enum:psx,targettype*/psx/*endname*/" standalone="/*name:standalone|enum:boolvalue|enum-strict:boolvalue*/true/*endname*/">
   /*block:parameters*/        
         <parameters>
             /*block:param*/
-            <param id="/*name:id|required*/in/*endname*/" output="/*name:output|required*/@/*endname*/" type="/*name:type|required|enum:file,paramtype*/file/*endname*/" description="/*name:description*/descr/*endname*/" required="/*name:required|enum:true,booltype*/true/*endname*/"/>
+            <param id="/*name:id|required*/in/*endname*/" expose="/*name:expose|enum:true,boolvalue|enum_strict:boolvalue*/true/*endname*/" output="/*name:output|required*/@/*endname*/" type="/*name:type|required|enum:file,paramtype*/file/*endname*/" description="/*name:description*/descr/*endname*/" required="/*name:required|enum:true,booltype*/true/*endname*/"/>
             /*endblock:param*/
             /*block:rip*/
-            <param id="out" output="-o @" type="file"/>
+            <param id="out" output="-o @" type="file" expose="/*name:expose|enum:false,boolvalue|enum_strict:boolvalue*/false/*endname*/"/>
             <param id="vpos" output="-org @[0] @[1]" type="/*name:type|required|enum:vec[2],paramtype*/vec[2]/*endname*/" description="Position of the texture in psx-vram"/>
             <param id="cpos" output="-plt @[0] @[1] @[2]" type="/*name:type|required|enum:vec[3],paramtype*/vec[3]/*endname*/" description="Position of the CLUT in the vram"/>
             <param id="bpp" output="-bpp @" type="/*name:type|required|enum:enum[],paramtype*/enum[4,8,16,255]/*endname*/" description="bits per color-information"/>
             <param id="alpha" output="-usealpha" type="/*name:type|required|enum:bool,paramtype*/bool/*endname*/" description="Use alpha" required="/*name:required|enum:false,booltype*/false/*endname*/"/> 
+            <param id="name" output="-name @" type="/*name:type|required|enum:string,paramtype*/string/*endname*/"/>
             /*endblock:rip*/
         </parameters> 
   /*endblock:parameters*/        

@@ -1,0 +1,5 @@
+<thepipeline xmlns="https://thepipeline.com" xsi:schemaLocation="https://thepipeline.com ../xsd/thepipeline.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <tool id="dtgen" type="cli">
+        <command host="all" file="@/tools/python/simplegenerator/gen.py" wrapper="python"></command>
+    </tool>
+</thepipeline> 

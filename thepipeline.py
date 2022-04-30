@@ -16,6 +16,7 @@ ARG_GENERATE_XSD=False
 
 INPUT_TYPE_SINGLEFILE = 0
 INPUT_TYPE_MULTIFILE  = 1
+INPUT_TYPE_STANDALONE = 2
 
 if platform == "linux" or platform == "linux2":
     HOST="linux"
@@ -125,9 +126,11 @@ class XSDManager:
 
     def add_converter(self,converter):
         xsdconverter=self.creator.create_block(self.actions_type,converter.qualified_name())
-        for (id,output,tool_type,type_signature,description) in converter.params.values():
-            if id=="in" or id=="out":
+        for (id,output,tool_type,type_signature,description,expose) in converter.params.values():
+            if not expose:
                 continue
+            # if id=="in" or id=="out":
+            #     continue
             tool_type.put_xsd(self.creator,xsdconverter,converter.qualified_name(),id)
 
     def xsdcreator_write(self,filename):
@@ -177,14 +180,15 @@ def xget_parameters(xml):
         output = xget(param,"output","")
         default_value = xget(param,"default","")
         required = xget_b(param,"required",False)
+        expose = xget_b(param,"expose",True if id!="in" and id!="out" else False )
         type_signature = xget(param,"type","string",True)
         description = xget(param,"description","")
         tool_type=create_type(type_signature,default_value,required,param)
-        params[id]=(id,output,tool_type,type_signature,description)
+        params[id]=(id,output,tool_type,type_signature,description,expose)
     return params
 
-def create_parameter_tuple(id,output,tool_type,description):
-    return (id,output,tool_type,None,description)    
+def create_parameter_tuple(id,output,tool_type,description,expose=True):
+    return (id,output,tool_type,None,description,expose)    
 
 def trim_text(text):
     prefix=None
@@ -271,6 +275,7 @@ class Converter:
         self.prefix = xgetrequired(xml,"prefix")
         self.name   = xgetrequired(xml,"name")
         self.target = xget(xml,"target","all")
+        self.standalone = xget(xml,"standalone",False)
         if ARG_GENERATE_XSD:
             XSDManager.get().add_target(self.target)        
         
@@ -305,95 +310,125 @@ class Converter:
         Converter.add(converter)
 
     def reset_params(self):
+        self.metafiles={}
         for key in self.params:
-            id,output,tool_type,type_signature,description=self.params[key]
+            id,output,tool_type,type_signature,description,expose=self.params[key]
             tool_type.reset()
 
     def execute(self,context_data,counter,temp_folder,input_data,xml_data,file_history,executions):
         self.reset_params()
         context,shared_locals=context_data
         input_type,name,input=input_data
-        id,output,tool_type,type_signature,description=self.params["in"]
         
-        
-        if input_type==INPUT_TYPE_MULTIFILE and type(tool_type)==FileValue:
-            # multifiles on single-file converter. unfold and call this execute for each file inside of multifile
-            output_files=[]
-
-            output_result = 0
-            output_metafiles = []
-            output_id = None
-
-            for m_repo,m_file in input:
-                xml_data_clone=copy.deepcopy(xml_data)
-                single_inputdata=(INPUT_TYPE_SINGLEFILE,m_repo,m_file)
-                id,result,input_type,input,file_extension,_metafiles = self.execute(context_data,counter,temp_folder,single_inputdata,xml_data_clone,[m_file],executions)
-                if id:
-                    output_id=id
-
-                if result!=0:
-                    output_result=result
-                output_files.append((m_repo,input))
-                
-                if _metafiles:
-                    _metafiles=context.resolve_variables_in_string(_metafiles,shared_locals)
-                    for mf in _metafiles.split(','):
-                        if mf not in output_metafiles:
-                            output_metafiles.append(mf) 
-            
-            return output_id,output_result,INPUT_TYPE_MULTIFILE,output_files,file_extension,output_metafiles
-
-        tool_type.set(input)
-
-        id,output,tool_type,type_signature,description=self.params["out"]
-
-        if input_type==INPUT_TYPE_SINGLEFILE:
-            filename, file_extension = os.path.splitext(input)
-            file_extension=file_extension[1:]
-            filename_without_folder = os.path.basename(filename)
-            if "___" in filename_without_folder:
-                splits = filename_without_folder.split("___")
-                filename_without_folder = splits[1]
-            if self.tool_out_ext:
-                file_extension=self.tool_out_ext
-
-            out_file = "%s%s-%s___%s.%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name(),filename_without_folder,file_extension)
-            tool_type.set(out_file)
-            output_type=INPUT_TYPE_SINGLEFILE
-        else:
-            file_extension=self.tool_out_ext
-            ttype=type(tool_type)
-
-            name_orig = name
-            if "___" in name:
-                splits = name.split("___")
-                name_orig=splits[1]
-                
-            if ttype==FileValue:
-                out_file = "%s%s-%s___%s.%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name(),name_orig,file_extension)
-                tool_type.set(out_file)
-                output_type=INPUT_TYPE_SINGLEFILE
-            elif ttype==MultiFileValue:
-                output_type=INPUT_TYPE_MULTIFILE
-
-                # for filename in input:
-                #     filename, file_extension = os.path.splitext(file_history[0])
-                #     file_extension=file_extension[1:]
-                #     filename_without_folder = os.path.basename(filename)
-                #     if self.tool_out_ext:
-                #         file_extension=self.tool_out_ext
-
-                #     out_file = "%s%s-%s-%s.%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name(),filename_without_folder,file_extension)
-                # TODO
-                raise AttributeError("Output multifile here not supported,yet")
-
         for attrib in xml_data.attrib:
             if attrib in self.params:
                 value = xml_data.attrib[attrib]
-                id,output,tool_type,type_signature,description=self.params[attrib]
+                id,output,tool_type,type_signature,description,expose=self.params[attrib]
                 tool_type.set(value)
 
-        _,_,id_value,_,_=self.params["id"]
+        if not self.standalone:                       
+            id,output,tool_type,type_signature,description,expose=self.params["in"]
+        
+            if input_type==INPUT_TYPE_MULTIFILE and type(tool_type)==FileValue:
+                # multifiles on single-file converter. unfold and call this execute for each file inside of multifile
+                output_files=[]
+
+                output_result = 0
+                output_metafiles = []
+                output_id = None
+
+                for m_repo,m_file in input:
+                    xml_data_clone=copy.deepcopy(xml_data)
+                    single_inputdata=(INPUT_TYPE_SINGLEFILE,m_repo,m_file)
+                    id,result,input_type,input,file_extension,_metafiles = self.execute(context_data,counter,temp_folder,single_inputdata,xml_data_clone,[m_file],executions)
+                    if id:
+                        output_id=id
+
+                    if result!=0:
+                        output_result=result
+                    output_files.append((m_repo,input))
+                    
+                    if _metafiles:
+                        _metafiles=context.resolve_variables_in_string(_metafiles,shared_locals)
+                        for mf in _metafiles.split(','):
+                            if mf not in output_metafiles:
+                                output_metafiles.append(mf) 
+                
+                return output_id,output_result,INPUT_TYPE_MULTIFILE,output_files,file_extension,output_metafiles
+
+            tool_type.set(input)
+
+            id,output,tool_type,type_signature,description,expose=self.params["out"]
+
+            if input_type==INPUT_TYPE_SINGLEFILE:
+                filename, file_extension = os.path.splitext(input)
+                file_extension=file_extension[1:]
+                filename_without_folder = os.path.basename(filename)
+                if "___" in filename_without_folder:
+                    splits = filename_without_folder.split("___")
+                    filename_without_folder = splits[1]
+                if self.tool_out_ext:
+                    file_extension=self.tool_out_ext
+
+                if tool_type.value_set():
+                    out_file = context.resolve_variables_in_string(tool_type.get(),shared_locals)
+                    out_file = context.resolve_file(out_file,False)
+                    dir_name = os.path.dirname(out_file)
+                    try:
+                        os.makedirs(dir_name)
+                    except:
+                        pass
+                else:
+                    out_file = "%s%s-%s___%s.%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name(),filename_without_folder,file_extension)
+                
+                tool_type.set(out_file)
+                output_type=INPUT_TYPE_SINGLEFILE
+            else:
+                file_extension=self.tool_out_ext
+                ttype=type(tool_type)
+
+                name_orig = name
+                if "___" in name:
+                    splits = name.split("___")
+                    name_orig=splits[1]
+                    
+                if ttype==FileValue:
+                    if tool_type.value_set():
+                        out_file = context.resolve_variables_in_string(tool_type.get(),shared_locals)
+                        out_file = context.resolve_file(out_file,False)
+                        dir_name = os.path.dirname(out_file)
+                        try:
+                            os.makedirs(dir_name)
+                        except:
+                            pass
+                        
+                    else:
+                        out_file = "%s%s-%s___%s.%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name(),name_orig,file_extension)
+                    
+                    tool_type.set(out_file)
+                    output_type=INPUT_TYPE_SINGLEFILE
+                elif ttype==MultiFileValue:
+                    output_type=INPUT_TYPE_MULTIFILE
+
+                    # for filename in input:
+                    #     filename, file_extension = os.path.splitext(file_history[0])
+                    #     file_extension=file_extension[1:]
+                    #     filename_without_folder = os.path.basename(filename)
+                    #     if self.tool_out_ext:
+                    #         file_extension=self.tool_out_ext
+
+                    #     out_file = "%s%s-%s-%s.%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name(),filename_without_folder,file_extension)
+                    # TODO
+                    raise AttributeError("Output multifile here not supported,yet")
+        else:
+            # out_file = tool_type.get()
+            # if "://" in out_file:
+            #     out_file = context.resolve_file(out_file,False)
+            print("STANDALONE")
+
+
+
+        _,_,id_value,_,_,_=self.params["id"]
         converter_id = None
         if id_value.value_set():
             converter_id = id_value.get()                
@@ -403,14 +438,20 @@ class Converter:
         arguments = self.tool_args
 
         for p in self.params:
-            (id,output,tool_type,type_signature,description) = self.params[p]
+            (id,output,tool_type,type_signature,description,expose) = self.params[p]
             if not tool_type.value_set():
                 continue
             
             direct_tag = r"@[%s]"%id
             output=replace_special_characters(output)
 
+            if type(tool_type)==FileValue and "://" in tool_type.get():
+                out_file = tool_type.get()
+                out_file = context.resolve_file(out_file,False)
+                tool_type.set(out_file)                
+
             param_output = tool_type.output(output)
+
             if direct_tag in arguments:
                 arguments=arguments.replace(direct_tag,param_output)
             else:
@@ -424,9 +465,13 @@ class Converter:
         retcode,execution_call = tool.execute(arguments)
         executions.append(execution_call)
 
-        file_history.append(out_file)
-
-        return converter_id,retcode,output_type,out_file,file_extension,self.metafiles
+        if not self.standalone:
+            file_history.append(out_file)
+            return converter_id,retcode,output_type,out_file,file_extension,self.metafiles
+        else:
+            filename, file_extension = os.path.splitext(input)
+            file_extension=file_extension[1:]
+            return converter_id,retcode,input_type,input,file_extension,self.metafiles
         
         
 
@@ -453,15 +498,19 @@ class Tool:
         self.version=xget(xml,"version","unknown")
         self.is_default=xget_b(xml,"default",False)
         self.target=xget(xml,"target","all")
+
         if ARG_GENERATE_XSD:
             XSDManager.get().add_target(self.target)
 
         self.command=None
         for cmd in xml.iter("%scommand"%XMLNS):
-            host = xgetrequired(cmd,"host")
-            if host!=HOST:
+            host    = xgetrequired(cmd,"host")
+            if host!=HOST and host!="all":
                 # ignore tools for other HOSTs
                 continue
+
+            self.host = host
+            self.wrapper = xget(cmd,"wrapper",None)
 
             if self.tool_type=="cli":
                 file = xgetrequired(cmd,"file")
@@ -504,7 +553,12 @@ class Tool:
     def execute(self,arguments):
         execution_command = "%s %s" % (self.command,arguments)
         print(execution_command)
-        retcode = os.system(execution_command)
+
+        if self.wrapper:
+            wrapper_tool = Tool.get(self.wrapper)
+            retcode,execution_command = wrapper_tool.execute(execution_command)
+        else:
+            retcode = os.system(execution_command)
 
         return retcode,execution_command
 
@@ -515,7 +569,7 @@ class FileRepository:
         self.name=repo_name
         self.filters=[]
     
-    def get_file(self,input,resolve_pattern=False,keep_repo_prefix=False):
+    def get_file(self,input,check_existence=True,resolve_pattern=False,keep_repo_prefix=False):
         # repo,all=FileRepository.get_repo_from_file(input)
         # if repo!=self.name:
         #     raise AttributeError("FileRepo[%s]. Tried to locate file from other filerepo!:%s" % (self.folder,input))
@@ -523,7 +577,7 @@ class FileRepository:
         # input = input.replace(all,"")
         filename="%s/%s" % (self.folder,input)
         if not resolve_pattern:
-            if not os.path.exists(filename):
+            if check_existence and not os.path.exists(filename):
                 raise AttributeError("FileRepo[%s]. Could not locate file:%s" % (self.folder,input))
 
             return os.path.abspath(filename)
@@ -593,13 +647,14 @@ class FileRepository:
         return listOfFiles
 
     def get_repo_from_file(input):
-        m=re.search(r"(.+?)://",input)
+        m=re.search(r"(.+?)://(.+)",input)
         if m is None:
             raise AttributeError("Could not filter file-repository:%s" % input)
 
         all=m.group(0)
         repo=m.group(1)
-        return repo,all
+        relative=m.group(2)
+        return repo,all,relative
 
 
 
@@ -620,7 +675,7 @@ class Context:
         for ie in input_xml:
             if ie.tag=="%sfile"%XMLR:
                 filename = xgetrequired(ie,"filename")
-                repo_name,all = FileRepository.get_repo_from_file(filename)
+                repo_name,all,relative = FileRepository.get_repo_from_file(filename)
                 
                 input_files = InputFile(self,filename,repo_name).retrieve(True)
                 for input_file in input_files:
@@ -660,10 +715,11 @@ class Context:
         tag = xml_input.tag.lower().replace(XMLR,"")
         if tag=="file":
             filename = xgetrequired(xml_input,"filename")
-            repo_name,all = FileRepository.get_repo_from_file(filename)
+            repo_name,all,relative = FileRepository.get_repo_from_file(filename)
             input_file = InputFile(self,filename,repo_name).retrieve()
             return (INPUT_TYPE_SINGLEFILE,repo_name,input_file)
         elif tag=="multifile":
+            print("XML:%s" % ElementTree.tostring(xml_input))
             multifile_name=xgetrequired(xml_input,"name")
             result=[]
             for xml_file in xml_input:
@@ -672,7 +728,7 @@ class Context:
                     raise AttributeError("Invalid element in multifile:%s\n%s"%(tag,ElementTree.tostring(xml_file)))
                 
                 filename = xgetrequired(xml_file,"filename")
-                repo_name,all = FileRepository.get_repo_from_file(filename)
+                repo_name,all,relative = FileRepository.get_repo_from_file(filename)
                 input_file = InputFile(self,filename,repo_name).retrieve()
                 result.append((repo_name,input_file))
             return (INPUT_TYPE_MULTIFILE,multifile_name,result)
@@ -699,6 +755,12 @@ class Context:
         for attrib in xml.attrib:
             resolved = self.resolve_variables_in_string(xml.attrib[attrib],shared_locals)
             xml.attrib[attrib]=resolved
+
+    def resolve_file(self,filename,check_existance):
+        repo_name,all,relative = FileRepository.get_repo_from_file(filename)
+        repo = self.get_repository(repo_name)
+        result = repo.get_file(relative,check_existance)
+        return result
 
     def check_condition(shared_locals,condition):
         result = eval(condition,shared_locals)
@@ -761,7 +823,6 @@ class Context:
                             for mf in _metafiles:
                                 if mf not in metafiles:
                                     metafiles.append(mf)
-                                
 
                         command_counter+=1
                         shared_locals["file-ext"]=file_extension

@@ -7,10 +7,10 @@ class InputFile:
         self.repo=repo
         self.relative_part=relative_part.replace("%s://"%repo,"")
 
-    def retrieve(self,resolve_glob=False):
+    def retrieve(self,resolve_glob=False,check_existance=True):
         repo = self.context.get_repository(self.repo)
         if resolve_glob:
-            files = repo.get_file(self.relative_part,True,True)
+            files = repo.get_file(self.relative_part,check_existance,True,True)
             return files
         else:
             file = repo.get_file(self.relative_part)

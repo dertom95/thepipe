@@ -1,6 +1,7 @@
 <main xmlns="https://tp-runtime.com" xsi:schemaLocation="https://tp-runtime.com ../plugins/tpruntime.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <repositories>
         <file-repository name="audio" folder="/home/ttrocha/nas-big1/media/audio/freesound.org"/>
+        <file-repository name="music" folder="/home/ttrocha/nas-big1/media/audio/freemusicarchive.org/chiptune"/>
     </repositories>
 
     <pipeline pl-name="audio">
@@ -15,4 +16,17 @@
             <output target="audio-psx" repository="cwd" filename="export/@[target]/@[init-file-wo-ext].@[file-ext]" />
         </actions>
     </pipeline>
+
+    <pipeline pl-name="audio2">
+        <init>
+            <input>
+                <file filename="music://*.mp3" />
+            </input>
+        </init>
+        <actions>
+            <ac-psx-wav-format />
+            <ac-psx-vag-format />
+            <output target="audio-psx" repository="cwd" filename="export/@[target]/@[init-file-wo-ext].@[file-ext]" />
+        </actions>
+    </pipeline>    
 </main>
