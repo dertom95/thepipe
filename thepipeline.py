@@ -65,6 +65,7 @@ class XSDManager:
 
         file_type=self.creator.create_type("file_type")
         self.creator.add_attribute(file_type,"filename",True,"files_enum" if ARG_AUTOCOMPLETE_REPOSITORIES else "xs:string")
+        self.creator.add_attribute(file_type,"id")
 
         pi_input=self.creator.create_block(p_init,"input")
         pii_file=self.creator.create_block(pi_input,"file","file_type")
@@ -677,11 +678,16 @@ class Context:
         for ie in input_xml:
             if ie.tag=="%sfile"%XMLR:
                 filename = xgetrequired(ie,"filename")
+                _id = xget(ie,"id",None)
                 repo_name,all,relative = FileRepository.get_repo_from_file(filename)
                 
                 input_files = InputFile(self,filename,repo_name).retrieve(True)
                 for input_file in input_files:
-                    xml_file = ElementTree.SubElement(output_xml,"%sfile"%XMLR,filename=input_file)
+                    if _id:
+                        xml_file = ElementTree.SubElement(output_xml,"%sfile"%XMLR,filename=input_file,id=_id)
+                    else:
+                        xml_file = ElementTree.SubElement(output_xml,"%sfile"%XMLR,filename=input_file)
+
             elif ie.tag=="%smultifile"%XMLR:
                 mf_name = xgetrequired(ie,"name")
                 multi_file=ElementTree.SubElement(output_xml,"%smultifile"%XMLR,name=mf_name)
@@ -721,14 +727,16 @@ class Context:
         tag = xml_input.tag.lower().replace(XMLR,"")
         if tag=="file":
             filename = xgetrequired(xml_input,"filename")
+            id = xget(xml_input,"id",None)
             repo_name,all,relative = FileRepository.get_repo_from_file(filename)
             input_file = InputFile(self,filename,repo_name).retrieve()
-            return (INPUT_TYPE_SINGLEFILE,repo_name,input_file,None)
+            return (INPUT_TYPE_SINGLEFILE,repo_name,(id,input_file),None)
         elif tag=="multifile":
             evals=[]
             print("XML:%s" % ElementTree.tostring(xml_input))
             multifile_name=xgetrequired(xml_input,"name")
             result=[]
+            result_with_id=[]
             for xml_file in xml_input:
                 tag=xml_file.tag.lower().replace(XMLR,"")
                 
@@ -739,10 +747,13 @@ class Context:
                     raise AttributeError("Invalid element in multifile:%s\n%s"%(tag,ElementTree.tostring(xml_file)))
                 
                 filename = xgetrequired(xml_file,"filename")
+                id = xget(xml_file,"id",None)
                 repo_name,all,relative = FileRepository.get_repo_from_file(filename)
                 input_file = InputFile(self,filename,repo_name).retrieve()
                 result.append((repo_name,input_file))
-            return (INPUT_TYPE_MULTIFILE,multifile_name,result,evals)
+                if id:
+                    result_with_id.append((id,input_file))
+            return (INPUT_TYPE_MULTIFILE,multifile_name,(result,result_with_id),evals)
         else:
             raise AttributeError("Unknown input-type:%s" % tag)
 
@@ -970,6 +981,15 @@ def greater_equal(a,b):
         execution_calls=[]
         IDs = {}
         multifiles={}
+        files_ids={}
+        files_id_order=[]
+
+        def add_file_id(id,file):
+            if not id in files_id_order:
+                files_id_order.append(id)
+                files_ids[id]=[]
+            if file not in files_ids:
+                files_ids[id].append(file)
 
         target = xget(xml_pipeline,"target","all")
 
@@ -983,6 +1003,8 @@ def greater_equal(a,b):
 
         shared_locals["target"]=target
         shared_locals["temp_folder"]=pipeline_folder
+        shared_locals["all_file_id_folders"]=files_ids
+        shared_locals["current_file_id_order"]=files_id_order
 
         init=xml_pipeline.find("%sinit"%XMLR)
         if init is None:
@@ -1003,6 +1025,9 @@ def greater_equal(a,b):
         print(ElementTree.tostring)
         command_counter=1
         for _input in resolved_input:
+            #todo do we want to clear? yes, i guesss
+            files_id_order.clear()
+
             metafiles=[]
             #execute input-eval
             if _input.tag=="%seval"%XMLR:
@@ -1011,9 +1036,11 @@ def greater_equal(a,b):
                 execution_calls.append("eval start:\n%s\neval end:------" % ev_str)
                 continue       
 
-            input_type,name,input,evals = input_data = self.retrieve_input(_input)
-                    
+            input_type,name,input_info,evals = input_data = self.retrieve_input(_input)
             if input_type==INPUT_TYPE_SINGLEFILE:
+                input,id=input_info
+                if id:
+                    add_file_id(id,input)
                 shared_locals["init_input_type"]="single_file"
                 shared_locals["init_repo_name"]=name
                 
@@ -1027,11 +1054,21 @@ def greater_equal(a,b):
                 shared_locals["init_filename"]=in_file
                 shared_locals["init_file_wo_ext"]=filename_wo_ext
                 shared_locals["init_file_ext"]=file_extension
+                shared_locals["init_file_id"]=id
+                shared_locals["current_file_folders"]=None
             elif input_type==INPUT_TYPE_MULTIFILE:
+                input,files_with_id=input_info
+                for id,file in files_with_id:
+                    add_file_id(id,file)
+
                 file_history=[input]
                 shared_locals["init_input_type"]="multi_file"
                 shared_locals["init_mf_name"]=name
                 shared_locals["init_mf_files"]=input
+                current_id_folders=[]
+                for id_folder in files_id_order:
+                    current_id_folders.append((id_folder,files_ids[id_folder]))
+                shared_locals["current_file_folders"]=current_id_folders
             else:
                 raise AttributeError("Unknown input_type:%s [%s]" % (input_type,ElementTree.tostring(_input)))
 

@@ -77,6 +77,7 @@
 	<xs:complexType name="file_type">
 		<xs:choice minOccurs="0" maxOccurs="unbounded"/>
 		<xs:attribute name="filename" type="files_enum" use="required"/>
+		<xs:attribute name="id" type="xs:string"/>
 	</xs:complexType>
 	<xs:complexType name="actions_type">
 		<xs:choice minOccurs="0" maxOccurs="unbounded">

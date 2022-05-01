@@ -10,30 +10,16 @@
         <init>
             <input>
                 <multifile name="sheep01-dying">
-                    <file filename="sheep://Dying/Dying_000.png" />
-                    <file filename="sheep://Dying/Dying_001.png" />
-                    <file filename="sheep://Dying/Dying_002.png" />
-                    <file filename="sheep://Dying/Dying_003.png" />
-                    <file filename="sheep://Dying/Dying_004.png" />
-                    <file filename="sheep://Dying/Dying_005.png" />
+                    <file id="die" filename="sheep://Dying/Dying*.png" />
                 </multifile>
 
                 <multifile name="sheep01-running">
-                    <file filename="sheep://Running/Running_000.png" />
-                    <file filename="sheep://Running/Running_001.png" />
-                    <file filename="sheep://Running/Running_002.png" />
-                    <file filename="sheep://Running/Running_003.png" />
-                    <file filename="sheep://Running/Running_004.png" />
-                    <file filename="sheep://Running/Running_005.png" />
-                    <file filename="sheep://Running/Running_006.png" />
-                    <file filename="sheep://Running/Running_007.png" />
-                    <file filename="sheep://Running/Running_008.png" />
-                    <file filename="sheep://Running/Running_009.png" />
+                    <file id="run" filename="sheep://Running/Running_*.png" />
                 </multifile>
 
                 <multifile name="shepp01-hurteat">
-                    <file filename="sheep://Eating/Eating_*.png"/>
-                    <file filename="sheep://Hurt/Hurt_*.png"/>
+                    <file id="eat" filename="sheep://Eating/Eating_*.png"/>
+                    <file id="hurt" filename="sheep://Hurt/Hurt_*.png"/>
                 </multifile>
                 
 
@@ -42,6 +28,11 @@
         <actions>
             <eval>
                 tiley=tilex=ceil(sqrt(len(init_mf_files)))
+                print("FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!")
+                print("FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!")
+                print("FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!")
+                print("FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!")
+                print(current_file_folders)
             </eval>
             <ic-rescale id="rescaled" forcescale-xy="64x64" />
             <ic-im-spritepacker tile="@[tilex]x@[tiley]" size="64x64" />
