@@ -1,9 +1,9 @@
 from xml.dom import minidom
 
 def xml_sanity_check(xml:minidom.Element):
-    print("element:%s"%xml.tagName)
+    #print("element:%s"%xml.tagName)
     for attrName, attrValue in xml.attributes.items():
-        print("\t%s=%s" % (attrName,attrValue))
+        #print("\t%s=%s" % (attrName,attrValue))
         if attrValue is None:
             a=0
     for child in xml.childNodes:
@@ -27,7 +27,7 @@ class XSDCreator:
     def create_enum_type(self,name,enum_values,strict=False):
         if name in self.enum_types:
             #raise KeyError("EnumType:%s already defined" % name)
-            print("EnumType:%s already defined" % name)
+            #print("EnumType:%s already defined" % name)
             return
 		# <xs:union>
 		# 	<xs:simpleType>

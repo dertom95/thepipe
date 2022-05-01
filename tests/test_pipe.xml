@@ -1,11 +1,6 @@
 <main>
     <repository name="fs1" folder="/home/ttrocha"/>
 
-    <preset target="psx" name="animation" domain="texturepack">
-        <tile-size width="32" height="32" keep-aspect="false"/>
-        <texture-size maxWidth="255" maxHeight="255" grow="vertical" allow-multiple="true"/>
-    </preset>
-
     <pipeline pl-name="animation" target="psx">
 
         <input>

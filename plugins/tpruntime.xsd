@@ -39,10 +39,20 @@
 											<xs:complexType>
 												<xs:choice minOccurs="0" maxOccurs="unbounded">
 													<xs:element name="file" type="file_type"/>
+													<xs:element name="eval">
+														<xs:complexType mixed="true">
+															<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+														</xs:complexType>
+													</xs:element>
 													<xs:element name="multifile">
 														<xs:complexType>
 															<xs:choice minOccurs="0" maxOccurs="unbounded">
 																<xs:element name="file" type="file_type"/>
+																<xs:element name="eval">
+																	<xs:complexType mixed="true">
+																		<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+																	</xs:complexType>
+																</xs:element>
 															</xs:choice>
 															<xs:attribute name="name" type="xs:string" use="required"/>
 														</xs:complexType>
@@ -179,6 +189,14 @@
 					<xs:attribute name="id" type="xs:string"/>
 				</xs:complexType>
 			</xs:element>
+			<xs:element name="ic-im-spritepacker">
+				<xs:complexType>
+					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+					<xs:attribute name="tile" type="vec2type"/>
+					<xs:attribute name="size" type="vec2type"/>
+					<xs:attribute name="id" type="xs:string"/>
+				</xs:complexType>
+			</xs:element>
 			<xs:element name="ic-psx-tim">
 				<xs:complexType>
 					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
@@ -258,9 +276,9 @@
 			</xs:simpleType>
 			<xs:simpleType>
 				<xs:restriction base="xs:string">
+					<xs:enumeration value="all"/>
 					<xs:enumeration value="6502"/>
 					<xs:enumeration value="linux"/>
-					<xs:enumeration value="all"/>
 					<xs:enumeration value="psx"/>
 				</xs:restriction>
 			</xs:simpleType>
@@ -433,6 +451,7 @@
 					<xs:enumeration value="cwd://tests/test_compiler.xml"/>
 					<xs:enumeration value="cwd://tests/test_pipe1.py"/>
 					<xs:enumeration value="cwd://tests/test.c"/>
+					<xs:enumeration value="cwd://tests/test_montage.xml"/>
 					<xs:enumeration value="cwd://tests/test_pipe_loop.xml"/>
 					<xs:enumeration value="cwd://tests/test_pipe2.xml"/>
 					<xs:enumeration value="cwd://tests/test_pipe_if.xml"/>
@@ -450,7 +469,9 @@
 				<xs:restriction base="xs:string"/>
 			</xs:simpleType>
 			<xs:simpleType>
-				<xs:restriction base="xs:string"/>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="rescaled"/>
+				</xs:restriction>
 			</xs:simpleType>
 		</xs:union>
 	</xs:simpleType>

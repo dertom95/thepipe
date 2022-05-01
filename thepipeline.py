@@ -1,3 +1,4 @@
+from lib2to3.pgen2.literals import evalString
 import re,argparse,os,time
 import shutil,copy,glob
 
@@ -67,11 +68,12 @@ class XSDManager:
 
         pi_input=self.creator.create_block(p_init,"input")
         pii_file=self.creator.create_block(pi_input,"file","file_type")
-
+        pii_eval=self.creator.create_block(pi_input,"eval",None,True)
 
         multifile=self.creator.create_block(pi_input,"multifile")
         self.creator.add_attribute(multifile,"name",True)
         piim_file=self.creator.create_block(multifile,"file","file_type")
+        piim_eval=self.creator.create_block(multifile,"eval",None,True)
 
         self.actions=self.creator.create_block(self.pipeline,"actions","actions_type")
 
@@ -139,7 +141,7 @@ class XSDManager:
         self.creator.create_enum_type("ids_enum",self.ids)
 
         result=self.creator.to_string()
-        print(result)
+        #print(result)
 
         xsd_file = open(filename,"w")
         xsd_file.write(result)
@@ -684,6 +686,10 @@ class Context:
                 mf_name = xgetrequired(ie,"name")
                 multi_file=ElementTree.SubElement(output_xml,"%smultifile"%XMLR,name=mf_name)
                 self.input_resolver(ie,multi_file)
+            else:
+                other=ElementTree.SubElement(output_xml,ie.tag,ie.attrib)
+                other.text=ie.text
+                
 
     def add_repository_from_xml(self,xml):
         name = xgetrequired(xml,"name")
@@ -717,21 +723,26 @@ class Context:
             filename = xgetrequired(xml_input,"filename")
             repo_name,all,relative = FileRepository.get_repo_from_file(filename)
             input_file = InputFile(self,filename,repo_name).retrieve()
-            return (INPUT_TYPE_SINGLEFILE,repo_name,input_file)
+            return (INPUT_TYPE_SINGLEFILE,repo_name,input_file,None)
         elif tag=="multifile":
+            evals=[]
             print("XML:%s" % ElementTree.tostring(xml_input))
             multifile_name=xgetrequired(xml_input,"name")
             result=[]
             for xml_file in xml_input:
                 tag=xml_file.tag.lower().replace(XMLR,"")
-                if tag!="file":
+                
+                if tag=="eval":
+                    evals.append(xml_file)
+                    continue
+                elif tag!="file":
                     raise AttributeError("Invalid element in multifile:%s\n%s"%(tag,ElementTree.tostring(xml_file)))
                 
                 filename = xgetrequired(xml_file,"filename")
                 repo_name,all,relative = FileRepository.get_repo_from_file(filename)
                 input_file = InputFile(self,filename,repo_name).retrieve()
                 result.append((repo_name,input_file))
-            return (INPUT_TYPE_MULTIFILE,multifile_name,result)
+            return (INPUT_TYPE_MULTIFILE,multifile_name,result,evals)
         else:
             raise AttributeError("Unknown input-type:%s" % tag)
 
@@ -786,17 +797,17 @@ class Context:
                     command = copy.deepcopy(_command)
                     input_data=(input_type,name,input)
                     if input_type==INPUT_TYPE_SINGLEFILE:
-                        shared_locals["full-filename"]=input
+                        shared_locals["full_filename"]=input
                         in_file = os.path.basename(input)
                         filename_wo_ext, file_extension = os.path.splitext(in_file)
                         file_extension=file_extension[1:]
                         shared_locals["filename"]=in_file
-                        shared_locals["file-wo-ext"]=filename_wo_ext
-                        shared_locals["file-ext"]=file_extension
+                        shared_locals["file_wo_ext"]=filename_wo_ext
+                        shared_locals["file_ext"]=file_extension
                     else:
-                        shared_locals["input-type"]="multi_file"
-                        shared_locals["mf-name"]=name
-                        shared_locals["mf-files"]=input
+                        shared_locals["input_type"]="multi_file"
+                        shared_locals["mf_name"]=name
+                        shared_locals["mf_files"]=input
 
 
                     tag = command.tag.lower().replace(XMLR,"")
@@ -825,7 +836,7 @@ class Context:
                                     metafiles.append(mf)
 
                         command_counter+=1
-                        shared_locals["file-ext"]=file_extension
+                        shared_locals["file_ext"]=file_extension
                         if result!=0:
                             raise AttributeError("command resulted in error!")
                     ## PYTHON-EVAL ##
@@ -936,7 +947,10 @@ class Context:
     
     def init_funcs(self,shared_data):
         # TODO make this a dedicated script
-        exec(""" 
+        exec("""
+from math import sqrt,ceil
+import math
+         
 def lower(a,b):
     return a<b
 def greater(a,b):
@@ -968,13 +982,13 @@ def greater_equal(a,b):
             pass
 
         shared_locals["target"]=target
-        shared_locals["temp-folder"]=pipeline_folder
+        shared_locals["temp_folder"]=pipeline_folder
 
         init=xml_pipeline.find("%sinit"%XMLR)
         if init is None:
             raise AttributeError("Pipeline without init:\n%s" % ElementTree.tostring(xml_pipeline))
 
-        for ev in init.iter("%seval"%XMLR):
+        for ev in init.findall("./%seval"%XMLR):
             ev_str = trim_text(ev.text)
             exec(ev_str,shared_globals,shared_locals)
             execution_calls.append("eval start:\n%s\neval end:------" % ev_str)
@@ -985,34 +999,47 @@ def greater_equal(a,b):
 
         # resolve file-pattern first
         resolved_input=ElementTree.SubElement(init,"%sinput"%XMLR)
-        for _input in xml_input:
-            self.input_resolver(xml_input,resolved_input)
-
+        self.input_resolver(xml_input,resolved_input)
+        print(ElementTree.tostring)
         command_counter=1
         for _input in resolved_input:
             metafiles=[]
-            input_type,name,input = input_data = self.retrieve_input(_input)
+            #execute input-eval
+            if _input.tag=="%seval"%XMLR:
+                ev_str = trim_text(_input.text)
+                exec(ev_str,shared_globals,shared_locals)
+                execution_calls.append("eval start:\n%s\neval end:------" % ev_str)
+                continue       
+
+            input_type,name,input,evals = input_data = self.retrieve_input(_input)
+                    
             if input_type==INPUT_TYPE_SINGLEFILE:
-                shared_locals["init-input_type"]="single_file"
-                shared_locals["init-repo_name"]=name
+                shared_locals["init_input_type"]="single_file"
+                shared_locals["init_repo_name"]=name
                 
                 file_history=[input]
                 execution_calls.append("\nInput-File:%s" %input)
 
-                shared_locals["init-full-filename"]=input
+                shared_locals["init_full_filename"]=input
                 in_file = os.path.basename(input)
                 filename_wo_ext, file_extension = os.path.splitext(in_file)
                 file_extension=file_extension[1:]
-                shared_locals["init-filename"]=in_file
-                shared_locals["init-file-wo-ext"]=filename_wo_ext
-                shared_locals["init-file-ext"]=file_extension
+                shared_locals["init_filename"]=in_file
+                shared_locals["init_file_wo_ext"]=filename_wo_ext
+                shared_locals["init_file_ext"]=file_extension
             elif input_type==INPUT_TYPE_MULTIFILE:
                 file_history=[input]
-                shared_locals["init-input-type"]="multi_file"
-                shared_locals["init-mf-name"]=name
-                shared_locals["init-mf-files"]=input
+                shared_locals["init_input_type"]="multi_file"
+                shared_locals["init_mf_name"]=name
+                shared_locals["init_mf_files"]=input
             else:
                 raise AttributeError("Unknown input_type:%s [%s]" % (input_type,ElementTree.tostring(_input)))
+
+            if evals:
+                for eval in evals:
+                    ev_str = trim_text(eval.text)
+                    exec(ev_str,shared_globals,shared_locals)
+                    execution_calls.append("eval start:\n%s\neval end:------" % ev_str)
 
             block_data = None
             pipeline_context = (block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history)

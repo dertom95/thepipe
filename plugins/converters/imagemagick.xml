@@ -1,4 +1,12 @@
 <thepipeline  xmlns="https://thepipeline.com" xsi:schemaLocation="https://thepipeline.com ../xsd/thepipeline.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    
+    <tool id="convert" type="cli">
+        <command host="linux" file="/usr/bin/convert"/>
+    </tool>
+    <tool id="montage" type="cli">
+        <command host="linux" file="/usr/bin/montage"/>
+    </tool>
+    
     <converter prefix="ic" name="indexed"> 
         <parameters>
             <param id="in" output="@" type="file"/>
@@ -8,6 +16,7 @@
         </parameters> 
         <command toolid="convert" arguments="@[in] @@ @[out]" extension="png"/>
     </converter>
+
     <converter prefix="ic" name="rotate"> 
         <parameters>
             <param id="in" output="@" type="file"/>
@@ -18,6 +27,7 @@
         </parameters> 
         <command toolid="convert" arguments="@[in] @@ @[out]" extension="png"/>
     </converter>
+
     <converter name="rescale" prefix="ic">
         <parameters>
             <param id="in" output="@" type="file"/>
@@ -28,5 +38,15 @@
             <param id="forcescale-percent" output="-resize @%" type="number[0-100]" />
         </parameters>
         <command arguments="@[in] @@ @[out]" toolid="convert" />
+    </converter>
+
+    <converter prefix="ic" name="im-spritepacker">
+        <parameters>
+            <param id="in" output="@" type="multifile"/>
+            <param id="out" output="@" type="file"/>
+            <param id="tile" output="-tile @[0]x@[1]" type="vec[2]" />
+            <param id="size" output="-geometry @[0]x@[1]+0+0" type="vec[2]"/>
+        </parameters>
+        <command arguments="@[in] @@ -background transparent @[out]" toolid="montage" extension="png"/>
     </converter>
 </thepipeline>

@@ -1,0 +1,55 @@
+<main xmlns="https://tp-runtime.com" xsi:schemaLocation="https://tp-runtime.com ../plugins/tpruntime.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <repositories>
+        <file-repository name="fs1" folder="/home/ttrocha/_dev/projects/python/thepipeline">
+            <filter extension="png" />
+        </file-repository>
+        <file-repository name="sheep" folder="/home/ttrocha/nas-big1/media/2d/humble-stuff/2dgameartbundle/Cartoon Sheep/PNG/Cartoon Sheep - 01/PNG Sequences" />
+    </repositories>
+
+    <pipeline pl-name="sprites">
+        <init>
+            <input>
+                <multifile name="sheep01-dying">
+                    <file filename="sheep://Dying/Dying_000.png" />
+                    <file filename="sheep://Dying/Dying_001.png" />
+                    <file filename="sheep://Dying/Dying_002.png" />
+                    <file filename="sheep://Dying/Dying_003.png" />
+                    <file filename="sheep://Dying/Dying_004.png" />
+                    <file filename="sheep://Dying/Dying_005.png" />
+                </multifile>
+
+                <multifile name="sheep01-running">
+                    <file filename="sheep://Running/Running_000.png" />
+                    <file filename="sheep://Running/Running_001.png" />
+                    <file filename="sheep://Running/Running_002.png" />
+                    <file filename="sheep://Running/Running_003.png" />
+                    <file filename="sheep://Running/Running_004.png" />
+                    <file filename="sheep://Running/Running_005.png" />
+                    <file filename="sheep://Running/Running_006.png" />
+                    <file filename="sheep://Running/Running_007.png" />
+                    <file filename="sheep://Running/Running_008.png" />
+                    <file filename="sheep://Running/Running_009.png" />
+                </multifile>
+
+                <multifile name="shepp01-hurteat">
+                    <file filename="sheep://Eating/Eating_*.png"/>
+                    <file filename="sheep://Hurt/Hurt_*.png"/>
+                </multifile>
+                
+
+            </input>
+        </init>
+        <actions>
+            <eval>
+                tiley=tilex=ceil(sqrt(len(init_mf_files)))
+            </eval>
+            <ic-rescale id="rescaled" forcescale-xy="64x64" />
+            <ic-im-spritepacker tile="@[tilex]x@[tiley]" size="64x64" />
+            <!-- desktop -->
+            <output target="desktop" repository="fs1" filename="export/@[target]/spritesheets/@[init_mf_name].@[file_ext]" />
+        </actions>
+
+
+    </pipeline>
+
+</main>
