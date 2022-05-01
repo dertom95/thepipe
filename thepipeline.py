@@ -956,11 +956,12 @@ class Context:
 
             return (block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,old_pipeline_folder,file_history)
     
-    def init_funcs(self,shared_data):
+    def init_funcs(self,shared_data):  
         # TODO make this a dedicated script
         exec("""
 from math import sqrt,ceil
-import math
+import math,os
+from xml.etree import ElementTree as ET
          
 def lower(a,b):
     return a<b
@@ -969,7 +970,15 @@ def greater(a,b):
 def lower_equal(a,b):
     return a<=b
 def greater_equal(a,b):
-    return a>=b        
+    return a>=b
+def write_string(filename,data):
+    try:
+        os.makedirs(os.path.dirname(filename))
+    except:
+        pass
+    f = open(filename, "w")
+    f.write(str(data))
+    f.close()      
         """,shared_data)
 
     def execute_pipeline(self,xml_pipeline):

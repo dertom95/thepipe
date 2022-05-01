@@ -28,11 +28,17 @@
         <actions>
             <eval>
                 tiley=tilex=ceil(sqrt(len(init_mf_files)))
-                print("FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!")
-                print("FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!")
-                print("FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!")
-                print("FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!FILES!!")
+
                 print(current_file_folders)
+                root=ET.Element("spritepack")
+                start=0                
+                for id,files in current_file_folders:
+                    section=ET.SubElement(root,"section",id=id,start=str(start),end=str(start+len(files)-1))
+                    for file in files:
+                        file=ET.SubElement(section,"file",filename=file,id=id)
+                    start+=len(files)
+                print("WRITE TO: export/{target}/spritesheets/{init_mf_name}.xml".format(target=target,init_mf_name=init_mf_name))
+                write_string("export/{target}/spritesheets/{init_mf_name}.xml".format(target=target,init_mf_name=init_mf_name),ET.tostring(root).decode('utf-8'))
             </eval>
             <ic-rescale id="rescaled" forcescale-xy="64x64" />
             <ic-im-spritepacker tile="@[tilex]x@[tiley]" size="64x64" />
