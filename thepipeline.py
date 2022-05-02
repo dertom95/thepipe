@@ -339,6 +339,7 @@ class Converter:
                 output_result = 0
                 output_metafiles = []
                 output_id = None
+                file_extension=None
 
                 for m_repo,m_file in input:
                     xml_data_clone=copy.deepcopy(xml_data)
@@ -449,9 +450,9 @@ class Converter:
             output=replace_special_characters(output)
 
             if type(tool_type)==FileValue and "://" in tool_type.get():
-                out_file = tool_type.get()
-                out_file = context.resolve_file(out_file,False)
-                tool_type.set(out_file)                
+                file_name = tool_type.get()
+                file_name = context.resolve_file(file_name,False)
+                tool_type.set(file_name)                
 
             param_output = tool_type.output(output)
 
@@ -606,6 +607,7 @@ class FileRepository:
         self.filters.append(filter)
 
     def write_file(self,input,output_in_repo):
+        output_in_repo=output_in_repo.replace("%s://"%self.name,"")
         output_filename="%s/%s" % (self.folder,output_in_repo)
         directory = os.path.dirname(output_filename)
         try:
@@ -857,8 +859,14 @@ class Context:
                         execution_calls.append("eval start:\n%s\neval end:------" % ev_str)
                     ## OUTPUT / COPY ##
                     elif tag=="output":
-                        name=xget(command,"repository","cwd")
                         filename=xgetrequired(command,"filename")
+                        
+                        m = re.match(r"(.+?)://.*",filename)
+                        if m:
+                            name = m.group(1)
+                        else:
+                            raise AttributeError("output-command: no filerepository specified: %s" % filename)
+
                         target_before=target
                         target=xget(command,"target",target)
                         copy_metafiles=xget_b(command,"copy_metafiles",True)
@@ -874,6 +882,7 @@ class Context:
                             for mf in metafiles:
                                 filename="%s/%s" % (folder,os.path.basename(mf))
                                 repo.write_file(mf,filename)
+                                print("Output to %s" %filename)
 
                         execution_calls.append("output:%s => [%s]:%s" % (input,name,filename))
                         target=target_before
@@ -962,7 +971,12 @@ class Context:
 from math import sqrt,ceil
 import math,os
 from xml.etree import ElementTree as ET
-         
+from xml.dom import minidom
+
+def xml_pretty(xml):
+    xmlstr = minidom.parseString(ET.tostring(root)).toprettyxml(indent="   ")
+    return xmlstr
+
 def lower(a,b):
     return a<b
 def greater(a,b):
@@ -1047,7 +1061,7 @@ def write_string(filename,data):
 
             input_type,name,input_info,evals = input_data = self.retrieve_input(_input)
             if input_type==INPUT_TYPE_SINGLEFILE:
-                input,id=input_info
+                id,input=input_info
                 if id:
                     add_file_id(id,input)
                 shared_locals["init_input_type"]="single_file"
@@ -1133,15 +1147,16 @@ def namespace(element):
     m = re.match(r'\{.*\}', element.tag)
     return m.group(0) if m else ''
 
-def load_plugins(folder="plugins"):
-    xml_files = Path(folder).rglob("*.xml")
-    xml_element_tree = None
-    for xml_file in xml_files:
-        data = ElementTree.parse(xml_file).getroot()
-        if xml_element_tree is None:
-            xml_element_tree=data
-        else:
-            xml_element_tree.extend(data)
+def load_plugins(folders):
+    for folder in folders:
+        xml_files = Path(folder).rglob("*.xml")
+        xml_element_tree = None
+        for xml_file in xml_files:
+            data = ElementTree.parse(xml_file).getroot()
+            if xml_element_tree is None:
+                xml_element_tree=data
+            else:
+                xml_element_tree.extend(data)
     return xml_element_tree
 
 def parse_tools(xml_data):
@@ -1162,17 +1177,24 @@ def parse_arguments():
     parser.add_argument("--autocomplete-repositories",type=bool,default=False,help="iterates over repositories for autocompletion")
     parser.add_argument("--autocomplete-repository-levels",type=int,default=2,help="folder depth to use")
     parser.add_argument("--generate-xsd",type=bool,default=False,help="generate runtime.xsd (default:plugins/tpruntime.xsd)")
+    parser.add_argument("--xsd-output-filename",default="plugins/tpruntime.xsd",help="output folder of the runtime xsd (default: plugins/tpruntime.xsd) ")
+    parser.add_argument("--plugins-folder",action="append",help="search path for plugins folder (default: plugins ) ")
     args = parser.parse_args()
 
     ctx = Context(args)
-    return ctx
+    return ctx,args
 
 def execute_context(ctx):
     pass    
 
 def startup():
-    ctx = parse_arguments()
-    xml = load_plugins()
+    current_folder = os.path.dirname(os.path.realpath(__file__))    
+
+    ctx,args = parse_arguments()
+    
+    external_plugin_folders = args.plugins_folder or []
+    plugin_folders = ["%s/plugins"%current_folder]+external_plugin_folders
+    xml = load_plugins(plugin_folders)
     parse_tools(xml)
 
 
@@ -1185,6 +1207,11 @@ def startup():
         
 
     if ARG_GENERATE_XSD:
-        XSDManager.get().xsdcreator_write("plugins/tpruntime.xsd")
+        try:
+            dirname = os.path.dirname(args.xsd_output_filename)
+            os.makedirs(dirname)
+        except:
+            pass
+        XSDManager.get().xsdcreator_write(args.xsd_output_filename)
 
 startup()

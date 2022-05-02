@@ -7,6 +7,10 @@
         <command host="linux" file="/usr/bin/montage"/>
     </tool>
     
+    <tool id="composite" type="cli">
+        <command host="linux" file="/usr/bin/composite"/>
+    </tool>
+
     <converter prefix="ic" name="indexed"> 
         <parameters>
             <param id="in" output="@" type="file"/>
@@ -28,6 +32,28 @@
         <command toolid="convert" arguments="@[in] @@ @[out]" extension="png"/>
     </converter>
 
+    <converter prefix="ic" name="border"> 
+        <parameters>
+            <param id="in" output="@" type="file"/>
+            <param id="out" output="@" type="file"/>
+            <param id="color" required="true" output="-bordercolor ''@'' " type="enum[transparent,white,#rgb,#rrggbb,#rrggbbaa]" description="the border color"/>
+            <param id="width" required="true" output="-border @" type="number[1-100]" description="border width in pixels" />
+        </parameters> 
+        <command toolid="convert" arguments="@[in] @[color] -compose Copy @[width] @[out]" extension="png"/>
+    </converter>  
+    
+    <converter prefix="ic" name="combine">
+        <parameters>
+            <param id="in" output="@" type="file"/>
+            <param id="bg-image" required="true" output="@" type="file"/>
+            <param id="out" output="@" type="file"/>
+            <param id="gravity" required="true" output="-gravity @ " type="enum[NorthWest,North,NorthEast,West,Center,East,SouthWest,South,SouthEast]" description="where to place the overlay image"/>
+        </parameters>
+        <!-- <command toolid="convert" arguments="@[bg-image] @[in] @@ -background None -layers Flatten  @[out]" extension="png"/> -->
+       <command toolid="composite" arguments="@[gravity] @[in] @[bg-image] @[out]" extension="png"/>
+        
+    </converter>
+
     <converter name="rescale" prefix="ic">
         <parameters>
             <param id="in" output="@" type="file"/>
@@ -44,9 +70,11 @@
         <parameters>
             <param id="in" output="@" type="multifile"/>
             <param id="out" output="@" type="file"/>
-            <param id="tile" output="-tile @[0]x@[1]" type="vec[2]" />
-            <param id="size" output="-geometry @[0]x@[1]+0+0" type="vec[2]"/>
+            <param id="tile-layout" output="-tile @[0]x@[1]" type="vec[2]" description="x,y how to layout the tiles"/>
+            <param id="tile-size" output="-geometry @[0]x@[1]+0+0" type="vec[2]" description="width,height of a single tile"/>
         </parameters>
         <command arguments="@[in] @@ -background transparent @[out]" toolid="montage" extension="png"/>
     </converter>
+
+    
 </thepipeline>

@@ -1,0 +1,62 @@
+<main xmlns="https://tp-runtime.com" xsi:schemaLocation="https://tp-runtime.com ../plugins/tpruntime.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <repositories>
+        <file-repository name="icons" folder="/home/ttrocha/_dev/projects/games/urho.net/LeoTest/LeoTest.Main/raw/icons">
+            <filter extension="png" />
+        </file-repository>
+    </repositories>
+
+    <pipeline pl-name="bg-icons">
+        <init>
+            <input>
+                <file filename="icons://icon_bg*.png" />
+            </input>
+        </init>
+        <actions>
+            <ic-rescale forcescale-xy="200,200"/>
+            <output filename="icons://gen/@[init_file_wo_ext]_sized.png" />
+        </actions>
+    </pipeline>
+
+    <pipeline pl-name="icons">
+        <init>
+            <input>
+                <multifile name="icons">
+                    <file filename="icons://stone.png" />
+                    <file filename="icons://wood.png" />
+                </multifile>
+            </input>
+        </init>
+        <actions>
+            <eval>
+                tiley=tilex=ceil(sqrt(len(init_mf_files)))
+
+                print(current_file_folders)
+                root=ET.Element("spritepack",tilex=str(tilex),tiley=str(tiley))
+                start=0                
+
+                files=ET.SubElement(root,"files")
+                tile_id=0
+                for _,file in init_mf_files:
+                    file=ET.SubElement(files,"file",name=os.path.basename(file),filename=file,tile_id=str(tile_id))
+                    tile_id+=1
+
+                for id,files in current_file_folders:
+                    section=ET.SubElement(root,"section",id=id,start=str(start),end=str(start+len(files)-1))
+                    for file in files:
+                        file=ET.SubElement(section,"file",name=os.path.basename(file),filename=file,id=id)
+                    start+=len(files)
+                print("WRITE TO: export/{target}/spritesheets/{init_mf_name}.xml".format(target=target,init_mf_name=init_mf_name))
+                write_string("export/{target}/spritesheets/{init_mf_name}.xml".format(target=target,init_mf_name=init_mf_name),xml_pretty(root))
+            </eval>
+            <ic-rescale id="rescaled" forcescale-xy="64x64" />
+            <!-- <ic-border color="#f00" width="3" /> -->
+            <ic-combine bg-image="icons://gen/icon_bg_sized.png" gravity="center" />
+            <ic-im-spritepacker tile-layout="@[tilex]x@[tiley]" tile-size="200x200" />
+            <!-- desktop -->
+            <output target="desktop" filename="cwd://export/@[target]/spritesheets/@[init_mf_name].@[file_ext]" />
+        </actions>
+
+
+    </pipeline>
+
+</main>
