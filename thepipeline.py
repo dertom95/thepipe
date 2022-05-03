@@ -1,3 +1,4 @@
+from distutils.file_util import write_file
 from lib2to3.pgen2.literals import evalString
 import re,argparse,os,time
 import shutil,copy,glob
@@ -27,6 +28,21 @@ elif platform == "win32":
     HOST="win"
 else:
     raise AttributeError("Unknown platform: %s"  %  platform)
+
+from xml.dom import minidom
+
+def xml_pretty(xml):
+    xmlstr = minidom.parseString(ElementTree.tostring(xml)).toprettyxml(indent="   ")
+    return xmlstr
+
+def write_string(filename,data):
+    try:
+        os.makedirs(os.path.dirname(filename))
+    except:
+        pass
+    f = open(filename, "w")
+    f.write(str(data))
+    f.close()  
 
 class XSDManager:
     instance=None
@@ -88,8 +104,8 @@ class XSDManager:
         p_eval=self.creator.create_block(self.actions_type,"eval",None,True)
 
         p_output=self.creator.create_block(self.actions_type,"output")
-        self.creator.add_attribute(p_output,"repository")
         self.creator.add_attribute(p_output,"target")
+        self.creator.add_attribute(p_output,"copy_metafiles")
         self.creator.add_attribute(p_output,"filename",True)
 
         p_multifile_create = self.creator.create_block(self.actions_type,"multifile-create")
@@ -275,6 +291,8 @@ class Converter:
 
     def __init__(self,xml):
         global XMLNS
+        self.xml_filename=xgetrequired(xml,"xml_filename")
+        self.xml_folder=os.path.dirname(self.xml_filename)        
         self.prefix = xgetrequired(xml,"prefix")
         self.name   = xgetrequired(xml,"name")
         self.target = xget(xml,"target","all")
@@ -313,7 +331,6 @@ class Converter:
         Converter.add(converter)
 
     def reset_params(self):
-        self.metafiles={}
         for key in self.params:
             id,output,tool_type,type_signature,description,expose=self.params[key]
             tool_type.reset()
@@ -497,6 +514,8 @@ class Tool:
         global XMLNS
         print(ElementTree.tostring(xml))
         self.xml=xml
+        self.xml_filename=xgetrequired(xml,"xml_filename")
+        self.xml_folder=os.path.dirname(self.xml_filename)
         self.tool_type=xgetrequired(xml,"type")
         self.tool_id=xgetrequired(xml,"id")
         self.version=xget(xml,"version","unknown")
@@ -518,7 +537,9 @@ class Tool:
 
             if self.tool_type=="cli":
                 file = xgetrequired(cmd,"file")
-                self.command=file.replace("@",os.getcwd())
+                self.command=file.replace("@",self.xml_folder)
+                if not os.path.exists(self.command):
+                    raise AttributeError("Could not locate tool:%s at %s" % (self.qualified_name(),self.command))
             else:
                 raise AttributeError("Unknown ToolType:%s" % self.tool_type)
 
@@ -768,6 +789,9 @@ class Context:
             if var_name in shared_locals:
                 data = shared_locals[var_name]
                 string_data=string_data.replace(all,str(data))
+            else:
+                raise AttributeError("Unknown variable:%s in %s" % (var_name,string_data) )
+                string_data=string_data.replace(all,str(data))
             m = re.search(pattern,string_data)
 
         if "@[" in string_data:
@@ -965,17 +989,15 @@ class Context:
 
             return (block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,old_pipeline_folder,file_history)
     
+
     def init_funcs(self,shared_data):  
+        shared_data["write_string"]=write_string
+        shared_data["xml_pretty"]=xml_pretty
         # TODO make this a dedicated script
         exec("""
 from math import sqrt,ceil
 import math,os
 from xml.etree import ElementTree as ET
-from xml.dom import minidom
-
-def xml_pretty(xml):
-    xmlstr = minidom.parseString(ET.tostring(root)).toprettyxml(indent="   ")
-    return xmlstr
 
 def lower(a,b):
     return a<b
@@ -985,14 +1007,7 @@ def lower_equal(a,b):
     return a<=b
 def greater_equal(a,b):
     return a>=b
-def write_string(filename,data):
-    try:
-        os.makedirs(os.path.dirname(filename))
-    except:
-        pass
-    f = open(filename, "w")
-    f.write(str(data))
-    f.close()      
+
         """,shared_data)
 
     def execute_pipeline(self,xml_pipeline):
@@ -1153,10 +1168,15 @@ def load_plugins(folders):
         xml_element_tree = None
         for xml_file in xml_files:
             data = ElementTree.parse(xml_file).getroot()
+            for elem in data:
+                _xml_file = str(xml_file.resolve())
+                elem.set("xml_filename",_xml_file)
             if xml_element_tree is None:
                 xml_element_tree=data
             else:
                 xml_element_tree.extend(data)
+
+    write_string("all.xml",xml_pretty(xml_element_tree))
     return xml_element_tree
 
 def parse_tools(xml_data):

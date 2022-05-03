@@ -10,6 +10,6 @@
             <!-- <param id="xmlfile" output="-xml @[0]" type="file" description="Generates an SpriteSheet xml file at path"/> -->
             <param id="debug"   output="-debug" type="bool" description="Draws allocation boxes on sprite"/>
         </parameters> 
-        <command toolid="spritepacker" arguments="-xml @[temp-folder]@[mf-name].xml @@ @[in] @[out]" extension="png" metafiles="@[temp-folder]@[mf-name].xml"/>  
+        <command toolid="spritepacker" arguments="-xml @[temp_folder]@[mf_name].xml @@ @[in] @[out]" extension="png" metafiles="@[temp_folder]@[mf_name].xml"/>  
     </converter>
 </thepipeline>

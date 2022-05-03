@@ -1,5 +1,5 @@
 <thepipeline xmlns="https://thepipeline.com" xsi:schemaLocation="https://thepipeline.com ../xsd/thepipeline.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <tool id="spritepacker" type="cli">
-        <command host="linux" file="@/tools/linux/ic/SpritePacker"/>
+        <command host="linux" file="@/../../tools/linux/ic/SpritePacker"/>
     </tool>
 </thepipeline> 

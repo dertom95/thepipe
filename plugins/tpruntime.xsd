@@ -359,6 +359,7 @@
 					<xs:enumeration value="cwd://.gitigonre"/>
 					<xs:enumeration value="cwd://map2_2.png"/>
 					<xs:enumeration value="cwd://requirements.txt"/>
+					<xs:enumeration value="cwd://all.xml"/>
 					<xs:enumeration value="cwd://map2_4.png"/>
 					<xs:enumeration value="cwd://tools.py"/>
 					<xs:enumeration value="cwd://map2_24.png"/>

@@ -1,8 +1,8 @@
 <thepipeline  xmlns="https://thepipeline.com" xsi:schemaLocation="https://thepipeline.com ../xsd/thepipeline.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <tool id="img2tim" type="cli" target="psx">
-        <command host="linux" file="@/tools/linux/psx/img2tim"/>
+        <command host="linux" file="@/../../tools/linux/psx/img2tim"/>
     </tool>
     <tool id="wav2vag" type="cli" target="psx">
-        <command host="linux" file="@/tools/linux/psx/wav2vag"/>
+        <command host="linux" file="@/../../tools/linux/psx/wav2vag"/>
     </tool>
 </thepipeline>
