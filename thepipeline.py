@@ -395,12 +395,20 @@ class Converter:
                     out_file = context.resolve_variables_in_string(tool_type.get(),shared_locals)
                     out_file = context.resolve_file(out_file,False)
                     dir_name = os.path.dirname(out_file)
+                    shared_locals["temp_folder"]=dir_name
                     try:
                         os.makedirs(dir_name)
                     except:
                         pass
                 else:
-                    out_file = "%s%s-%s___%s.%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name(),filename_without_folder,file_extension)
+                    folder_name = "%s%s-%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name())
+                    shared_locals["temp_folder"]=folder_name                    
+                    out_file = "%s/%s.%s" % (folder_name,filename_without_folder,file_extension)
+                    try:
+                        os.makedirs(folder_name)
+                    except:
+                        pass
+
                 
                 tool_type.set(out_file)
                 output_type=INPUT_TYPE_SINGLEFILE
@@ -422,9 +430,18 @@ class Converter:
                             os.makedirs(dir_name)
                         except:
                             pass
+                        shared_locals["temp_folder"]=dir_name
                         
                     else:
-                        out_file = "%s%s-%s___%s.%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name(),name_orig,file_extension)
+                        folder_name = "%s%s-%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name())
+                        shared_locals["temp_folder"]=folder_name
+
+                        out_file = "%s/%s.%s" % (folder_name,name_orig,file_extension)
+                        try:
+                            os.makedirs(folder_name)
+                        except:
+                            pass                        
+                        #out_file = "%s%s-%s___%s.%s" %(temp_folder,str(counter).rjust(4,'0'),self.qualified_name(),name_orig,file_extension)
                     
                     tool_type.set(out_file)
                     output_type=INPUT_TYPE_SINGLEFILE

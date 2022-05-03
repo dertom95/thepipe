@@ -95,8 +95,8 @@
 			<xs:element name="output">
 				<xs:complexType>
 					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
-					<xs:attribute name="repository" type="xs:string"/>
 					<xs:attribute name="target" type="xs:string"/>
+					<xs:attribute name="copy_metafiles" type="xs:string"/>
 					<xs:attribute name="filename" type="xs:string" use="required"/>
 				</xs:complexType>
 			</xs:element>
