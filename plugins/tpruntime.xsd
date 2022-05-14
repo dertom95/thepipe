@@ -243,6 +243,12 @@
 					<xs:attribute name="id" type="xs:string"/>
 				</xs:complexType>
 			</xs:element>
+			<xs:element name="blender-object-output">
+				<xs:complexType>
+					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+					<xs:attribute name="id" type="xs:string"/>
+				</xs:complexType>
+			</xs:element>
 		</xs:choice>
 	</xs:complexType>
 	<xs:simpleType name="vec2type" final="restriction">
@@ -343,12 +349,26 @@
 			</xs:simpleType>
 			<xs:simpleType>
 				<xs:restriction base="xs:string">
-					<xs:enumeration value="icons://stone.png"/>
-					<xs:enumeration value="icons://wood.png"/>
-					<xs:enumeration value="icons://icon_bg.png"/>
-					<xs:enumeration value="icons://icon_bg_selected.png"/>
-					<xs:enumeration value="icons://gen/icon_bg_selected_sized.png"/>
-					<xs:enumeration value="icons://gen/icon_bg_sized.png"/>
+					<xs:enumeration value="fs1://map2.png"/>
+					<xs:enumeration value="fs1://map2_2.png"/>
+					<xs:enumeration value="fs1://map2_4.png"/>
+					<xs:enumeration value="fs1://map2_24.png"/>
+					<xs:enumeration value="leot://gameassets.blend1"/>
+					<xs:enumeration value="leot://untitled.blend"/>
+					<xs:enumeration value="leot://polygon_objects_static.blend"/>
+					<xs:enumeration value="leot://levels.blend1"/>
+					<xs:enumeration value="leot://characters.blend1"/>
+					<xs:enumeration value="leot://gameassets.blend"/>
+					<xs:enumeration value="leot://untitled.mtl"/>
+					<xs:enumeration value="leot://untitled.obj"/>
+					<xs:enumeration value="leot://untitled.abc"/>
+					<xs:enumeration value="leot://characters.fbx"/>
+					<xs:enumeration value="leot://untitled.blend1"/>
+					<xs:enumeration value="leot://characters.blend"/>
+					<xs:enumeration value="leot://polygon_objects_static.blend1"/>
+					<xs:enumeration value="leot://levels.blend"/>
+					<xs:enumeration value="leot://icons/stone.png"/>
+					<xs:enumeration value="leot://icons/wood.png"/>
 					<xs:enumeration value="cwd://activate_venv.sh"/>
 					<xs:enumeration value="cwd://todo.md"/>
 					<xs:enumeration value="cwd://map2.png"/>
@@ -363,6 +383,7 @@
 					<xs:enumeration value="cwd://map2_4.png"/>
 					<xs:enumeration value="cwd://tools.py"/>
 					<xs:enumeration value="cwd://map2_24.png"/>
+					<xs:enumeration value="cwd://executable/tomtest95"/>
 					<xs:enumeration value="cwd://.venv/pyvenv.cfg"/>
 					<xs:enumeration value="cwd://tests/test_pipe1.xml"/>
 					<xs:enumeration value="cwd://tests/test_pipe.xml"/>
@@ -376,6 +397,7 @@
 					<xs:enumeration value="cwd://tests/test_montage.xml"/>
 					<xs:enumeration value="cwd://tests/test_pipe_loop.xml"/>
 					<xs:enumeration value="cwd://tests/test_pipe2.xml"/>
+					<xs:enumeration value="cwd://tests/test_blender.xml"/>
 					<xs:enumeration value="cwd://tests/test_pipe_if.xml"/>
 					<xs:enumeration value="cwd://tests/test_pipe_audio.xml"/>
 					<xs:enumeration value="cwd://tests/test_pipe_combine.xml"/>
@@ -392,9 +414,7 @@
 				<xs:restriction base="xs:string"/>
 			</xs:simpleType>
 			<xs:simpleType>
-				<xs:restriction base="xs:string">
-					<xs:enumeration value="rescaled"/>
-				</xs:restriction>
+				<xs:restriction base="xs:string"/>
 			</xs:simpleType>
 		</xs:union>
 	</xs:simpleType>

@@ -8,7 +8,7 @@
     <pipeline pl-name="bg-icons">
         <init>
             <input>
-                <file filename="icons://icon_bg*.png" />
+                <file filename="icons://bg/icon_bg*.png" />
             </input>
         </init>
         <actions>
@@ -21,8 +21,7 @@
         <init>
             <input>
                 <multifile name="icons">
-                    <file filename="icons://stone.png" />
-                    <file filename="icons://wood.png" />
+                    <file filename="icons://*.png" />
                 </multifile>
             </input>
         </init>
@@ -53,7 +52,7 @@
             <ic-combine bg-image="icons://gen/icon_bg_sized.png" gravity="center" />
             <ic-im-spritepacker tile-layout="@[tilex]x@[tiley]" tile-size="200x200" />
             <!-- desktop -->
-            <output target="desktop" filename="cwd://export/@[target]/spritesheets/@[init_mf_name].@[file_ext]" />
+            <output target="desktop" filename="cwd://export/@[target]/spritesheets/@[mf_name].@[file_ext]" />
         </actions>
 
 

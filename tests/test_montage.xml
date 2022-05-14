@@ -43,7 +43,7 @@
             <ic-rescale id="rescaled" forcescale-xy="64x64" />
             <ic-im-spritepacker tile-layout="@[tilex]x@[tiley]" tile-size="64x64" />
             <!-- desktop -->
-            <output target="desktop" repository="fs1" filename="export/@[target]/spritesheets/@[init_mf_name].@[file_ext]" />
+            <output target="desktop" filename="fs1://export/@[target]/spritesheets/@[mf_name].@[file_ext]" />
         </actions>
 
 

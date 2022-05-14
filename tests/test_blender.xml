@@ -1,0 +1,22 @@
+<main xmlns="https://tp-runtime.com" xsi:schemaLocation="https://tp-runtime.com ../plugins/tpruntime.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <repositories>
+        <file-repository name="fs1" folder="/home/ttrocha/_dev/projects/python/thepipeline">
+            <filter extension="png" />
+        </file-repository>
+        <file-repository name="leot" folder="/home/ttrocha/_dev/projects/games/urho.net/LeoTest/LeoTest.Main/raw"/>
+    </repositories>
+
+    <pipeline pl-name="compiler">
+        <init>
+            <input>  
+                <file filename="leot://gameassets.blend"/>
+            </input>
+        </init>
+        <actions>
+            <blender-object-output />
+        </actions>
+
+        
+    </pipeline>
+
+</main>

@@ -33,7 +33,7 @@
                             </if-actions>
                         </else>
                     </if>
-                    <output target="desktop" repository="fs1" filename="export/@[target]/@[init-file-wo-ext]-tom_@[tom].@[file-ext]"  /> 
+                    <output target="desktop" filename="fs1://export/@[target]/@[init_file_wo_ext]-tom_@[tom].@[file_ext]"  /> 
                 </loop-actions>
             </loop>
 

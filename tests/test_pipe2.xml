@@ -36,19 +36,17 @@
             <ic-urho-spritepacker/>
             
             <!-- desktop -->
-            <output target="desktop" filename="fs1://export/@[target]/spritesheets/@[init-mf-name].@[file-ext]"  />
+            <output target="desktop" filename="fs1://export/@[target]/spritesheets/@[mf_name].@[file_ext]"  />
             
             <!-- PSX -->
             <ic-rescale scale-percent="50"/> 
             <ic-indexed colors="15" /> 
-            <output target="psx" filename="fs1://export/@[target]/spritesheets/4colors-@[init-mf-name].@[file-ext]" />
+            <output target="psx" filename="fs1://export/@[target]/spritesheets/4colors-@[mf_name].@[file_ext]" />
             <ic-psx-tim bpp="24" vpos="320x0" cpos="490,0"/>
-            <output target="psx" filename="fs1://export/@[target]/spritesheets/@[init-mf-name].@[file-ext]" />
+            <output target="psx" filename="fs1://export/@[target]/spritesheets/@[mf_name].@[file_ext]" />
     
             <set-input id="rescaled" />
             <ic-rescale forcescale-xy="128x128"/>
-
-    
         </actions>
 
         

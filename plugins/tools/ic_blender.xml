@@ -1,0 +1,14 @@
+<thepipeline xmlns="https://thepipeline.com" xsi:schemaLocation="https://thepipeline.com ../xsd/thepipeline.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <tool id="blender" type="cli">
+        <command host="linux" file="/home/ttrocha/blender-git/build_linux/bin/blender"/>
+    </tool>
+
+    <converter prefix="blender" name="object-output" target="all">
+        <parameters>
+            <param id="in" output="@" type="file"/>
+            <param id="out" output="@" type="file"/>
+        </parameters>
+        <command toolid="blender" arguments="--background @[in] --python /home/ttrocha/_dev/projects/python/thepipeline/tools/python/blender/output_objects.py -- --output-file @[out]"  extension="scene.objects.txt"/>        
+    </converter>
+ 
+</thepipeline> 

@@ -19,13 +19,13 @@
                 <loop-actions>
                     <ic-rotate degree-keepsize="@[degree]" />
                     <multifile-add id="rotations"/>
-                    <output target="desktop" repository="fs1" filename="export/rots/@[target]/@[init-file-wo-ext]-@[degree].@[file-ext]"  /> 
+                    <output target="desktop" filename="fs1://export/rots/@[target]/@[init_file_wo_ext]-@[degree].@[file_ext]"  /> 
                 </loop-actions>
             </loop>             
 
             <set-input id="rotations"/>
             <ic-urho-spritepacker/>
-            <output target="desktop" repository="fs1" filename="export/rots/@[target]/@[init-file-wo-ext]-spritesheet.@[file-ext]"  /> 
+            <output target="desktop" filename="fs1://export/rots/@[target]/@[init_file_wo_ext]-spritesheet.@[file_ext]"  /> 
 
             <!-- <output target="desktop" repository="fs1" filename="export/@[target]/spritesheets/@[init-mf-name].@[file-ext]"  />
             
