@@ -1,11 +1,13 @@
-* file-system-autocompletion generator as dedicated cli-command => own xsd
+* file-system-autocompletion generator as dedicated cli-command => own xsd (to be included)
+  * file-type restriction "file-type" exts="blend|jpg|scene"
 * generate thepipeline.xsd from within the application (not via gen.py)
 * execute specific pipeline
 * output pipeline options
 * include other pipeline-files
 * pipeline dependencies?
-* multiple commands?
-* tools via wrapper (like wine or python)
+* multiple commands in converter
+* ~~tools via wrapper (like wine or python)~~
+
 
 * specify possible converter-input and output-formats for automatic(?) creation of input-data?
 
@@ -13,3 +15,6 @@
   * multifile with target option
 
 * create xml-documents on the fly and use it as generator input
+
+* repositories: support blender-files to address datablocks
+* blender => render

@@ -1,5 +1,3 @@
-from distutils.file_util import write_file
-from lib2to3.pgen2.literals import evalString
 import re,argparse,os,time
 import shutil,copy,glob
 
@@ -271,8 +269,14 @@ def create_type(type_signature,default_value,required,xml_param):
             type_signature=type_signature.replace(all,"")
             m = re.search(enum_pattern,type_signature)
         return result_type
-    elif type_signature=="multifile":
-        return MultiFileValue(required)
+    elif type_signature.startswith("multifile"):
+        result = MultiFileValue(required)
+
+        splits=type_signature.split(",")
+        if len(splits)>1:
+            #got additional data
+            result.data=splits[1:]
+        return result
     else:
         raise AttributeError("Unknown type:%s" % type_signature)
 
@@ -339,7 +343,8 @@ class Converter:
         self.reset_params()
         context,shared_locals=context_data
         input_type,name,input=input_data
-        
+        output_tool_type = None
+
         for attrib in xml_data.attrib:
             if attrib in self.params:
                 value = xml_data.attrib[attrib]
@@ -361,7 +366,7 @@ class Converter:
                 for m_repo,m_file in input:
                     xml_data_clone=copy.deepcopy(xml_data)
                     single_inputdata=(INPUT_TYPE_SINGLEFILE,m_repo,m_file)
-                    id,result,input_type,input,file_extension,_metafiles = self.execute(context_data,counter,temp_folder,single_inputdata,xml_data_clone,[m_file],executions)
+                    id,name,result,input_type,input,file_extension,_metafiles = self.execute(context_data,counter,temp_folder,single_inputdata,xml_data_clone,[m_file],executions)
                     if id:
                         output_id=id
 
@@ -375,11 +380,12 @@ class Converter:
                             if mf not in output_metafiles:
                                 output_metafiles.append(mf) 
                 
-                return output_id,output_result,INPUT_TYPE_MULTIFILE,output_files,file_extension,output_metafiles
+                return output_id,name,output_result,INPUT_TYPE_MULTIFILE,output_files,file_extension,output_metafiles
 
             tool_type.set(input)
 
             id,output,tool_type,type_signature,description,expose=self.params["out"]
+            output_tool_type = tool_type
 
             if input_type==INPUT_TYPE_SINGLEFILE:
                 filename, file_extension = os.path.splitext(input)
@@ -409,9 +415,15 @@ class Converter:
                     except:
                         pass
 
-                
-                tool_type.set(out_file)
-                output_type=INPUT_TYPE_SINGLEFILE
+                if type(tool_type)==FileValue:
+                    tool_type.set(out_file)
+                    output_type=INPUT_TYPE_SINGLEFILE
+                elif type(tool_type)==MultiFileValue:
+                    output_type=INPUT_TYPE_MULTIFILE
+                    _name = xget(xml_data,"name")
+                    if _name:
+                        name = _name
+
             else:
                 file_extension=self.tool_out_ext
                 ttype=type(tool_type)
@@ -504,12 +516,15 @@ class Converter:
         executions.append(execution_call)
 
         if not self.standalone:
+            if output_type==INPUT_TYPE_MULTIFILE:
+                out_file = output_tool_type.set_files_from_data(context,shared_locals)
+
             file_history.append(out_file)
-            return converter_id,retcode,output_type,out_file,file_extension,self.metafiles
+            return converter_id,name,retcode,output_type,out_file,file_extension,self.metafiles
         else:
             filename, file_extension = os.path.splitext(input)
             file_extension=file_extension[1:]
-            return converter_id,retcode,input_type,input,file_extension,self.metafiles
+            return converter_id,name,retcode,input_type,input,file_extension,self.metafiles
         
         
 
@@ -699,8 +714,16 @@ class FileRepository:
         relative=m.group(2)
         return repo,all,relative
 
-
-
+def set_sharedlocals_for_file(input,id,shared_locals):
+    in_file = os.path.basename(input)
+    filename_wo_ext, file_extension = os.path.splitext(in_file)
+    file_extension=file_extension[1:]
+    shared_locals["init_filename"]=in_file
+    shared_locals["init_file_wo_ext"]=filename_wo_ext
+    shared_locals["init_file_ext"]=file_extension
+    shared_locals["init_file_id"]=id
+    shared_locals["init_input_type"]="single_file"
+    shared_locals["current_file_folders"]=None
 
 class Context:
     def __init__(self,args):
@@ -872,7 +895,7 @@ class Context:
                     converter = Converter.get(tag)
                     if converter:
                         self.resolve_attribute_variables(command,shared_locals)
-                        id,result,input_type,input,file_extension,_metafiles = converter.execute((self,shared_locals),command_counter,pipeline_folder,input_data,command,file_history,execution_calls)
+                        id,name,result,input_type,input,file_extension,_metafiles = converter.execute((self,shared_locals),command_counter,pipeline_folder,input_data,command,file_history,execution_calls)
                         
                         if id:
                             IDs[id]=(id,input_type,input,file_extension,_metafiles)
@@ -885,9 +908,10 @@ class Context:
                                     if mf not in metafiles:
                                         metafiles.append(mf)
                         else:
-                            for mf in _metafiles:
-                                if mf not in metafiles:
-                                    metafiles.append(mf)
+                            if _metafiles:
+                                for mf in _metafiles:
+                                    if mf not in metafiles:
+                                        metafiles.append(mf)
 
                         command_counter+=1
                         shared_locals["file_ext"]=file_extension
@@ -914,16 +938,26 @@ class Context:
 
                         shared_locals["target"]=target
 
-                        filename=self.resolve_variables_in_string(filename,shared_locals)
+                        def write(input,name,filename):
+                            nonlocal shared_locals
+                            filename=self.resolve_variables_in_string(filename,shared_locals)
 
-                        repo = self.get_repository(name)
-                        repo.write_file(input,filename)
-                        if copy_metafiles and metafiles:
-                            folder=os.path.dirname(filename)
-                            for mf in metafiles:
-                                filename="%s/%s" % (folder,os.path.basename(mf))
-                                repo.write_file(mf,filename)
-                                print("Output to %s" %filename)
+                            repo = self.get_repository(name)
+                            repo.write_file(input,filename)
+                            if copy_metafiles and metafiles:
+                                folder=os.path.dirname(filename)
+                                for mf in metafiles:
+                                    filename="%s/%s" % (folder,os.path.basename(mf))
+                                    repo.write_file(mf,filename)
+                                    print("Output to %s" %filename)
+                        
+                        if input_type==INPUT_TYPE_SINGLEFILE:
+                            write(input,name,filename)
+                        else:
+                            for _,_input in input:
+                                set_sharedlocals_for_file(_input,None,shared_locals)
+                                write(_input,name,filename)
+
 
                         execution_calls.append("output:%s => [%s]:%s" % (input,name,filename))
                         target=target_before
@@ -1058,6 +1092,8 @@ def greater_equal(a,b):
 
         shared_locals["target"]=target
         shared_locals["temp_folder"]=pipeline_folder
+        shared_locals["cwd_folder"]=os.getcwd()
+        shared_locals["tp_folder"]=os.path.dirname(os.path.realpath(__file__))
         shared_locals["all_file_id_folders"]=files_ids
         shared_locals["current_file_id_order"]=files_id_order
 
@@ -1096,21 +1132,15 @@ def greater_equal(a,b):
                 id,input=input_info
                 if id:
                     add_file_id(id,input)
-                shared_locals["init_input_type"]="single_file"
+
+                set_sharedlocals_for_file(input,id,shared_locals)
                 shared_locals["init_repo_name"]=name
                 
                 file_history=[input]
                 execution_calls.append("\nInput-File:%s" %input)
 
                 shared_locals["init_full_filename"]=input
-                in_file = os.path.basename(input)
-                filename_wo_ext, file_extension = os.path.splitext(in_file)
-                file_extension=file_extension[1:]
-                shared_locals["init_filename"]=in_file
-                shared_locals["init_file_wo_ext"]=filename_wo_ext
-                shared_locals["init_file_ext"]=file_extension
-                shared_locals["init_file_id"]=id
-                shared_locals["current_file_folders"]=None
+
             elif input_type==INPUT_TYPE_MULTIFILE:
                 input,files_with_id=input_info
                 for id,file in files_with_id:

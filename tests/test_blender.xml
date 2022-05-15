@@ -4,19 +4,32 @@
             <filter extension="png" />
         </file-repository>
         <file-repository name="leot" folder="/home/ttrocha/_dev/projects/games/urho.net/LeoTest/LeoTest.Main/raw"/>
+        <!-- <file-repository name="gs" folder="leot://gameassets.blend"/> -->
     </repositories>
 
-    <pipeline pl-name="compiler">
+    <!-- <pipeline pl-name="object_output">
         <init>
             <input>  
                 <file filename="leot://gameassets.blend"/>
             </input>
-        </init>
+        </init> 
         <actions>
-            <blender-object-output />
+            <blender-object-txt-output />
         </actions>
+    </pipeline> -->
 
-        
+    <pipeline pl-name="blender_thumbnails">
+        <init>
+            <input>  
+                <file filename="leot://gameassets.blend"/>
+            </input>
+        </init> 
+        <actions>
+            <blender-thumbnails name="buildings" collections="buildings" recursive_collections="true" size="128,128"/>
+            <ic-urho-spritepacker  />
+            <output target="desktop" filename="cwd://export/@[target]/spritesheets/@[mf_name].@[file_ext]" />
+        </actions>
     </pipeline>
+
 
 </main>

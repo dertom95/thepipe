@@ -1,4 +1,6 @@
 import re,os
+
+from pkg_resources import add_activation_listener
 from xsd_creator import XSDCreator
 
 class InputFile:
@@ -126,6 +128,7 @@ class MultiFileValue:
         self.is_set=False
         self.value=[]
         self.required=required
+        self.data=None
 
     def set(self,values):
         for val in values:
@@ -138,7 +141,6 @@ class MultiFileValue:
         self.value.append(_file)
         self.is_set=True
         
-
     def get(self):
         return self.value
 
@@ -148,6 +150,24 @@ class MultiFileValue:
 
     def value_set(self):
         return self.is_set
+
+    # todo: this is messy. do this somewhere else?
+    def set_files_from_data(self,ctx,shared_locals):
+        result = []
+        if self.data and len(self.data)>0:
+            filename_file=self.data[0]
+            filename_file=ctx.resolve_variables_in_string(filename_file,shared_locals)
+            folder = os.path.dirname(filename_file)
+            if not os.path.exists(filename_file):
+                raise AttributeError("Could not find Multifile-Inputfile: %s" % filename_file)
+
+            with open(filename_file) as f:
+                lines = f.readlines()
+                for line in lines:
+                    line=line.strip()
+                    result.append((None,os.path.abspath(line)))
+                    self.add_file(os.path.abspath("%s"%(line)))
+        return result
 
     def output(self,template):
         result=""

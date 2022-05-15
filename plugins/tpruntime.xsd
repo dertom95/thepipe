@@ -243,9 +243,21 @@
 					<xs:attribute name="id" type="xs:string"/>
 				</xs:complexType>
 			</xs:element>
-			<xs:element name="blender-object-output">
+			<xs:element name="blender-object-txt-output">
 				<xs:complexType>
 					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+					<xs:attribute name="id" type="xs:string"/>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="blender-thumbnails">
+				<xs:complexType>
+					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+					<xs:attribute name="name" type="xs:string" use="required"/>
+					<xs:attribute name="collections" type="xs:string" use="required"/>
+					<xs:attribute name="scale" type="xs:string"/>
+					<xs:attribute name="recursive_collections" type="booltype"/>
+					<xs:attribute name="size" type="vec2type" use="required"/>
+					<xs:attribute name="scenename" type="xs:string"/>
 					<xs:attribute name="id" type="xs:string"/>
 				</xs:complexType>
 			</xs:element>

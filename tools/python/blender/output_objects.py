@@ -1,11 +1,18 @@
-import bpy,sys
+import bpy
+
+import sys
+
+def get_parameter(param_name):
+    for i in range(len(sys.argv)):                                                                       
+        if sys.argv[i]==param_name:
+            try:
+                return sys.argv[i+1]
+            except:
+                return True
+    return None
 
 
-output = None
-for i in range(len(sys.argv)):                                                                       
-    if sys.argv[i]=="--output-file":
-        output=sys.argv[i+1]
-        break
+output = get_parameter("--output-file")
 
 if not output:
     raise AttributeError("Couldn't find --output-file: %s" % sys.argv)
