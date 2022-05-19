@@ -17,10 +17,12 @@
             <param id="out" output="@" type="multifile,@[temp_folder]/output_files.txt"/> <!-- multiple thumbnails-->
             <param id="name" output="" type="string" required="true"/>
             <param id="collections" output="--collections @" type="string" required="true"/>
-            <param id="scale" output="--scale @" type="string"/>
             <param id="recursive_collections" output="--recursive-collections" type="bool"/>
             <param id="size" output="--width @[0] --height @[1]" type="vec[2]" required="true"/> 
+            <param id="rotation" output="--rotation @[0],@[1],@[2]" type="vec[3]"/>
+            <param id="scale" output="--scale @" type="string"/>
             <param id="scenename" output="--scene-name @" type="string"/>
+            <param id="postfix" output="--postfix @" type="string" />
 
         </parameters>
         <command toolid="blender" arguments="--background @[in] --python @[tp_folder]/tools/python/blender/thumbnail_create.py -- --output-folder '@[temp_folder]'  @@" extension="png"/>        

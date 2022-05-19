@@ -25,11 +25,41 @@
             </input>
         </init> 
         <actions>
-            <blender-thumbnails name="buildings" collections="buildings" recursive_collections="true" size="128,128"/>
+
+            <blender-thumbnails name="buildings" collections="buildings" recursive_collections="true" size="128,128"  />
             <ic-urho-spritepacker  />
             <output target="desktop" filename="cwd://export/@[target]/spritesheets/@[mf_name].@[file_ext]" />
         </actions>
     </pipeline>
+
+    <pipeline pl-name="blender_rotation_thumbnails">
+        <init>
+            <input>  
+                <file filename="leot://gameassets.blend"/>
+            </input>
+        </init> 
+        <actions>
+            <multifile-create id="barrack-rotations"/>
+            <!-- brarrack -->
+            <loop init="degree=0" condition="lower_equal(degree,360)" step="degree+=22">
+                <loop-actions>
+                    <blender-thumbnails name="buildings" collections="barrack" postfix="_@[degree]" size="128,128" rotation="0,0,@[degree]" />
+                    <multifile-add id="barrack-rotations"/>                    
+                </loop-actions>
+            </loop>
+            <!-- house -->
+            <loop init="degree=0" condition="lower_equal(degree,360)" step="degree+=22">
+                <loop-actions>
+                    <blender-thumbnails name="buildings" collections="house" postfix="_@[degree]" size="128,128" rotation="0,0,@[degree]" />
+                    <multifile-add id="barrack-rotations"/>                    
+                </loop-actions>
+            </loop>
+
+            <set-input id="barrack-rotations" />
+            <ic-urho-spritepacker  />
+            <output target="desktop" filename="cwd://export/@[target]/spritesheets/@[mf_name].@[file_ext]" />
+        </actions>
+    </pipeline>    
 
 
 </main>

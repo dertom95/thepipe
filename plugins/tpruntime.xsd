@@ -120,6 +120,7 @@
 					<xs:attribute name="init" type="xs:string"/>
 					<xs:attribute name="condition" type="xs:string" use="required"/>
 					<xs:attribute name="step" type="xs:string"/>
+					<xs:attribute name="use_folder" type="xs:string"/>
 				</xs:complexType>
 			</xs:element>
 			<xs:element name="if">
@@ -254,10 +255,12 @@
 					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
 					<xs:attribute name="name" type="xs:string" use="required"/>
 					<xs:attribute name="collections" type="xs:string" use="required"/>
-					<xs:attribute name="scale" type="xs:string"/>
 					<xs:attribute name="recursive_collections" type="booltype"/>
 					<xs:attribute name="size" type="vec2type" use="required"/>
+					<xs:attribute name="rotation" type="vec3type"/>
+					<xs:attribute name="scale" type="xs:string"/>
 					<xs:attribute name="scenename" type="xs:string"/>
+					<xs:attribute name="postfix" type="xs:string"/>
 					<xs:attribute name="id" type="xs:string"/>
 				</xs:complexType>
 			</xs:element>
@@ -339,6 +342,18 @@
 			<xs:enumeration value="24"/>
 		</xs:restriction>
 	</xs:simpleType>
+	<xs:simpleType name="vec3type" final="restriction">
+		<xs:union>
+			<xs:simpleType>
+				<xs:restriction base="xs:string"/>
+			</xs:simpleType>
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="VAL,VAL,VAL"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:union>
+	</xs:simpleType>
 	<xs:simpleType name="targettype" final="restriction">
 		<xs:union>
 			<xs:simpleType>
@@ -381,6 +396,8 @@
 					<xs:enumeration value="leot://levels.blend"/>
 					<xs:enumeration value="leot://icons/stone.png"/>
 					<xs:enumeration value="leot://icons/wood.png"/>
+					<xs:enumeration value="leot://icons/icon_bg.png"/>
+					<xs:enumeration value="leot://icons/icon_bg_selected.png"/>
 					<xs:enumeration value="cwd://activate_venv.sh"/>
 					<xs:enumeration value="cwd://todo.md"/>
 					<xs:enumeration value="cwd://map2.png"/>

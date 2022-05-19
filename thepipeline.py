@@ -116,6 +116,7 @@ class XSDManager:
         self.creator.add_attribute(loop,"init")
         self.creator.add_attribute(loop,"condition",True,"xs:string")
         self.creator.add_attribute(loop,"step")
+        self.creator.add_attribute(loop,"use_folder")
 
         loop_actions=self.creator.create_block(loop,"loop-actions","actions_type")
 
@@ -967,10 +968,13 @@ class Context:
                         if id not in IDs:
                             raise KeyError("SetInput: unknown ID:%s" % id)
                         id,input_type,input,file_extension,_metafiles=IDs[id]
+                        # TODO: not sure about that:
+                        name = id
                     elif tag=="loop":
                         init = xget(command,"init",None)
                         condition = xgetrequired(command,"condition")
                         step = xget(command,"step",None)
+                        use_loop_folder = xget_b(command,"use_folder",False)
 
                         loop_data=("loop",init,condition,step)
 
@@ -978,11 +982,15 @@ class Context:
                             lines=init.replace(';','\n')
                             exec(lines,shared_locals)
                         while Context.check_condition(shared_locals,condition):
-                            loop_folder = "%sloop.%s/"%(old_pipeline_folder,command_counter)
-                            try:
-                                os.makedirs(loop_folder)
-                            except:
-                                pass
+                            if use_loop_folder:
+                                loop_folder = "%sloop.%s/"%(old_pipeline_folder,command_counter)
+                                try:
+                                    os.makedirs(loop_folder)
+                                except:
+                                    pass
+                            else:
+                                loop_folder = old_pipeline_folder
+
                             loop_ctx = (loop_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,loop_folder,file_history)
                             output_ctx = self.execute_commands(loop_ctx,command,"%sloop-actions"%XMLR)
                             #TODO process output? at the moment you need to create output for loops via multifile-create and -add
@@ -1019,7 +1027,6 @@ class Context:
                         IDs[multifile_id]=(multifile_id,INPUT_TYPE_MULTIFILE,[],file_extension,[])
                     elif tag=="multifile-add":
                         multifile_id = xgetrequired(command,"id")
-                        # TODO: what to do if this already exists?
                         if multifile_id not in multifiles:
                             raise KeyError("Unknown multifile-id: %s" % multifile_id)
                         
@@ -1031,8 +1038,9 @@ class Context:
                             mf_input.append(("cwd",input))
                             a=0
                         else:
+                            multifile.add_files(input)
                             mf_input=mf_input+input
-
+                            IDs[multifile_id]=(mf_id,mf_input_type,mf_input,mf_file_extension,mf_metafiles)
 
 
                     else:

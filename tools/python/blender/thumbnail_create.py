@@ -1,5 +1,6 @@
 import bpy
-import sys
+import sys,math
+from mathutils import Vector
 
 def get_parameter(param_name):
     for i in range(len(sys.argv)):                                                                       
@@ -51,6 +52,8 @@ collections = get_parameter("--collections")
 if not collections:
     raise AttributeError("blender-thumbnail needs --collections but got [%s]"%sys.argv)
 
+rotation = get_string("--rotation","0,0,0")
+
 scale = get_float("--cam-scale",18)
 
 width = get_int("--width",128)
@@ -58,6 +61,7 @@ height = get_int("--height",128)
 
 scene_name = get_string("--scene-name","__generic")
 
+filename_postfix=get_string("--postfix","")
 
 recursive_collections = get_parameter("--recursive-collections")
 
@@ -75,7 +79,11 @@ if recursive_collections:
 print("args: %s",sys.argv)
 
 print("output_folder={output_folder} cam_ortho_scale={scale} col_names={collections} recursive={recursive}".format(output_folder=output_folder,scale=scale,collections=collections,recursive=recursive_collections))
-
-bpy.ops.tmc.render_tiles(scene_name=scene_name,output_folder=output_folder,cam_ortho_scale=scale,col_names=collections,render_width=width,render_height=height)
+rotation=eval("Vector((%s))"%rotation)
+rotation[0]=math.radians(rotation[0])
+rotation[1]=math.radians(rotation[1])
+rotation[2]=math.radians(rotation[2])
+print("ROTATION: %s" % rotation)
+bpy.ops.tmc.render_tiles(scene_name=scene_name,output_folder=output_folder,cam_ortho_scale=scale,col_names=collections,rotation=rotation,render_width=width,render_height=height,save_filenames_append=True,save_filename_postfix=filename_postfix)
 
 sys.exit(0)

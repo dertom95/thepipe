@@ -140,6 +140,10 @@ class MultiFileValue:
         _file.set(file)
         self.value.append(_file)
         self.is_set=True
+    
+    def add_files(self,files):
+        for val in files:
+            self.add_file(val[1])
         
     def get(self):
         return self.value

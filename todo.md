@@ -6,7 +6,6 @@
 * include other pipeline-files
 * pipeline dependencies?
 * multiple commands in converter
-* ~~tools via wrapper (like wine or python)~~
 
 
 * specify possible converter-input and output-formats for automatic(?) creation of input-data?
@@ -18,3 +17,4 @@
 
 * repositories: support blender-files to address datablocks
 * blender => render
+  * create a support addon that can handle all the scripts for better development
