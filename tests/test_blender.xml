@@ -41,14 +41,14 @@
         <actions>
             <multifile-create id="barrack-rotations"/>
             <!-- brarrack -->
-            <loop init="degree=0" condition="lower_equal(degree,360)" step="degree+=22">
+            <loop init="degree=0" condition="lower_equal(degree,360)" step="degree+=45">
                 <loop-actions>
-                    <blender-thumbnails name="buildings" collections="barrack" postfix="_@[degree]" size="128,128" rotation="0,0,@[degree]" />
+                    <blender-thumbnails name="barrack" collections="barrack" postfix="_@[degree]" size="128,128" rotation="0,0,@[degree]" />
                     <multifile-add id="barrack-rotations"/>                    
                 </loop-actions>
             </loop>
             <!-- house -->
-            <loop init="degree=0" condition="lower_equal(degree,360)" step="degree+=22">
+            <loop init="degree=0" condition="lower_equal(degree,360)" step="degree+=45">
                 <loop-actions>
                     <blender-thumbnails name="buildings" collections="house" postfix="_@[degree]" size="128,128" rotation="0,0,@[degree]" />
                     <multifile-add id="barrack-rotations"/>                    

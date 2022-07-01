@@ -2,4 +2,52 @@
     <tool id="ffmpeg" type="cli">
         <command host="linux" file="/usr/bin/ffmpeg" />
     </tool>
+
+    <tool id="sox" type="cli">
+        <command host="linux" file="@/../../tools/win/sox/sox.exe" wrapper="wine"/>
+        <command host="win" file="@/../../tools/win/sox/sox.exe"/>
+    </tool>
+
+    <converter name="to-mono" prefix="ac">
+        <parameters>
+            <param id="in" output="-i @"  type="file" />
+            <param id="out" output="@" type="file"/>            
+        </parameters>
+        <command arguments="@@ -ac 1 @[out]" toolid="ffmpeg" />
+    </converter>
+
+    <converter name="to-wav" prefix="ac">
+        <parameters>
+            <param id="in" output="-i @"  type="file" />
+            <param id="out" output="@" type="file"/>            
+        </parameters>
+        <command arguments="@@ @[out]" toolid="ffmpeg" extension="wav"/>
+    </converter>
+
+    <converter name="to-wav" prefix="ac-dos" target="dos">
+        <parameters>
+            <param id="in" output="@"  type="file" />
+            <param id="out" output="@" type="file"/>            
+        </parameters>
+        <command arguments="@[in] -r 11025 -b 16 -e signed-integer -c 1 -t wav @[out]" toolid="sox" extension="wav"/>
+    </converter>
+
+    <converter name="to-sfx" prefix="ac-amiga" target="amiga">
+        <parameters>
+            <param id="in" output="@"  type="file" />
+            <param id="out" output="@" type="file"/>            
+        </parameters>
+        <command arguments="@[in] -r 5512 -t s8 -D @[out]" toolid="sox" extension="sfx"/>
+    </converter>
+
+    <converter name="to-sfx" prefix="ac-atari" target="atari">
+        <parameters>
+            <param id="in" output="@"  type="file" />
+            <param id="out" output="@" type="file"/>            
+        </parameters>
+        <command arguments="@[in] -r 2760 -c 1 -t u8 -D @[out]" toolid="sox" extension="sfx"/>
+    </converter>
+
+
+
 </thepipeline> 

@@ -13,7 +13,7 @@
         <actions>
             <ac-psx-wav-format />
             <ac-psx-vag-format />
-            <output target="audio-psx" repository="cwd" filename="export/@[target]/@[init-file-wo-ext].@[file-ext]" />
+            <output target="audio-psx" filename="cwd://export/@[target]/@[init_file_wo_ext].@[file_ext]" />
         </actions>
     </pipeline>
 
@@ -26,7 +26,7 @@
         <actions>
             <ac-psx-wav-format />
             <ac-psx-vag-format />
-            <output target="audio-psx" repository="cwd" filename="export/@[target]/@[init-file-wo-ext].@[file-ext]" />
+            <output target="audio-psx" filename="cwd://export/@[target]/@[init_file_wo_ext].@[file_ext]" />
         </actions>
     </pipeline>    
 </main>

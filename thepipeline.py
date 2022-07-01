@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import re,argparse,os,time
 import shutil,copy,glob
 
@@ -13,6 +15,7 @@ HOST=None
 ARG_AUTOCOMPLETE_REPOSITORIES=False
 ARG_AUTOCOMPLETE_REPOSITORY_LEVELS=2
 ARG_GENERATE_XSD=False
+ARG_TP_XSD_FOLDER=None
 
 INPUT_TYPE_SINGLEFILE = 0
 INPUT_TYPE_MULTIFILE  = 1
@@ -540,6 +543,12 @@ class Converter:
     def has(qn):
         return qn in Converter.CONVERTERS
 
+def add_to_listmap(map,key,value):
+    if key not in map:
+        map[key]=[]
+    map[key].append(value)
+
+
 class Tool:
     TOOLS={}
 
@@ -554,6 +563,22 @@ class Tool:
         self.version=xget(xml,"version","unknown")
         self.is_default=xget_b(xml,"default",False)
         self.target=xget(xml,"target","all")
+        self.environment_variables={}
+        self.environment_files={}
+
+        def parse_env(xml,env_key):
+            env_variables = xml.find("%senv"%XMLNS)
+            if env_variables:
+                for global_env in env_variables:
+                    file = xget(global_env,"file")
+                    if file:
+                        add_to_listmap(self.environment_files,env_key,file)
+                    else:
+                        key   = xgetrequired(global_env,"key")
+                        value = xgetrequired(global_env,"value")
+                        add_to_listmap(self.environment_variables,env_key,(key,value))
+
+        parse_env(xml,"global")
 
         if ARG_GENERATE_XSD:
             XSDManager.get().add_target(self.target)
@@ -564,6 +589,8 @@ class Tool:
             if host!=HOST and host!="all":
                 # ignore tools for other HOSTs
                 continue
+            
+            parse_env(cmd,"global")
 
             self.host = host
             self.wrapper = xget(cmd,"wrapper",None)
@@ -681,9 +708,9 @@ class FileRepository:
 
     def execute_filer(self,folder,filename,extension):
         for filter in self.filters:
-            if not filter(folder,filename,extension):
-                return False
-        return True
+            if filter(folder,filename,extension):
+                return True
+        return False
 
     def get_all_files(self):
         listOfFiles = []
@@ -728,13 +755,14 @@ def set_sharedlocals_for_file(input,id,shared_locals):
 
 class Context:
     def __init__(self,args):
-        global ARG_AUTOCOMPLETE_REPOSITORIES,ARG_AUTOCOMPLETE_REPOSITORY_LEVELS,ARG_GENERATE_XSD
+        global ARG_AUTOCOMPLETE_REPOSITORIES,ARG_AUTOCOMPLETE_REPOSITORY_LEVELS,ARG_GENERATE_XSD,ARG_TP_XSD_FOLDER
 
         self.input_files = args.input
         self.keep_intermediate = args.keep_intermediate_files
         ARG_AUTOCOMPLETE_REPOSITORIES = args.autocomplete_repositories
         ARG_AUTOCOMPLETE_REPOSITORY_LEVELS = args.autocomplete_repository_levels
         ARG_GENERATE_XSD = args.generate_xsd
+        ARG_TP_XSD_FOLDER = args.export_tp_xsd_to_folder
 
         self.repositories={}
 
@@ -793,8 +821,9 @@ class Context:
             filename = xgetrequired(xml_input,"filename")
             id = xget(xml_input,"id",None)
             repo_name,all,relative = FileRepository.get_repo_from_file(filename)
+            dir_name = os.path.dirname(relative)
             input_file = InputFile(self,filename,repo_name).retrieve()
-            return (INPUT_TYPE_SINGLEFILE,repo_name,(id,input_file),None)
+            return (INPUT_TYPE_SINGLEFILE,repo_name,(id,input_file),None,dir_name)
         elif tag=="multifile":
             evals=[]
             print("XML:%s" % ElementTree.tostring(xml_input))
@@ -817,7 +846,7 @@ class Context:
                 result.append((repo_name,input_file))
                 if id:
                     result_with_id.append((id,input_file))
-            return (INPUT_TYPE_MULTIFILE,multifile_name,(result,result_with_id),evals)
+            return (INPUT_TYPE_MULTIFILE,multifile_name,(result,result_with_id),evals,"")
         else:
             raise AttributeError("Unknown input-type:%s" % tag)
 
@@ -1135,7 +1164,8 @@ def greater_equal(a,b):
                 execution_calls.append("eval start:\n%s\neval end:------" % ev_str)
                 continue       
 
-            input_type,name,input_info,evals = input_data = self.retrieve_input(_input)
+            input_type,name,input_info,evals,dir_name = input_data = self.retrieve_input(_input)
+            shared_locals["in_repo_folder"]=dir_name
             if input_type==INPUT_TYPE_SINGLEFILE:
                 id,input=input_info
                 if id:
@@ -1148,6 +1178,10 @@ def greater_equal(a,b):
                 execution_calls.append("\nInput-File:%s" %input)
 
                 shared_locals["init_full_filename"]=input
+                
+                filename, file_extension = os.path.splitext(input)
+                file_extension=file_extension[1:]                
+                IDs["orig"]=("orig",input_type,input,file_extension,None)
 
             elif input_type==INPUT_TYPE_MULTIFILE:
                 input,files_with_id=input_info
@@ -1218,9 +1252,9 @@ def namespace(element):
     return m.group(0) if m else ''
 
 def load_plugins(folders):
+    xml_element_tree = None
     for folder in folders:
         xml_files = Path(folder).rglob("*.xml")
-        xml_element_tree = None
         for xml_file in xml_files:
             data = ElementTree.parse(xml_file).getroot()
             for elem in data:
@@ -1231,7 +1265,7 @@ def load_plugins(folders):
             else:
                 xml_element_tree.extend(data)
 
-    write_string("all.xml",xml_pretty(xml_element_tree))
+    write_string("all.xml_",xml_pretty(xml_element_tree))
     return xml_element_tree
 
 def parse_tools(xml_data):
@@ -1253,6 +1287,7 @@ def parse_arguments():
     parser.add_argument("--autocomplete-repository-levels",type=int,default=2,help="folder depth to use")
     parser.add_argument("--generate-xsd",type=bool,default=False,help="generate runtime.xsd (default:plugins/tpruntime.xsd)")
     parser.add_argument("--xsd-output-filename",default="plugins/tpruntime.xsd",help="output folder of the runtime xsd (default: plugins/tpruntime.xsd) ")
+    parser.add_argument("--export-tp-xsd-to-folder",default=None,help="exports thepipeline-xsd to use for additional plugins in your folder)")
     parser.add_argument("--plugins-folder",action="append",help="search path for plugins folder (default: plugins ) ")
     args = parser.parse_args()
 
@@ -1288,5 +1323,16 @@ def startup():
         except:
             pass
         XSDManager.get().xsdcreator_write(args.xsd_output_filename)
+
+    if ARG_TP_XSD_FOLDER:
+        destfolder = os.path.abspath(ARG_TP_XSD_FOLDER)
+        try:
+            os.makedirs(destfolder)
+        except:
+            pass
+        dest_path = destfolder+"/thepipeline.xsd"
+        shutil.copyfile(current_folder+"/plugins/xsd/thepipeline.xsd",dest_path)
+        a=0
+
 
 startup()

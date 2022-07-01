@@ -126,15 +126,36 @@
 							<xs:element name="command">
 								<xs:complexType>
 									<xs:choice minOccurs="0" maxOccurs="unbounded">
-										<xs:element name="rip">
+										<xs:element name="env">
 											<xs:complexType>
-												<xs:attribute name="host" type="hosttype"/>
+												<xs:attribute name="append" type="boolvalue"/>
+												<xs:attribute name="file" type="xs:string"/>
+												<xs:attribute name="key" type="xs:string"/>
+												<xs:attribute name="value" type="xs:string"/>
+											</xs:complexType>
+										</xs:element>
+										<xs:element name="execute">
+											<xs:complexType>
+												<xs:attribute name="call" type="xs:string" use="required"/>
 											</xs:complexType>
 										</xs:element>
 									</xs:choice>
 									<xs:attribute name="file" type="xs:string"/>
 									<xs:attribute name="host" type="hosttype"/>
 									<xs:attribute name="wrapper" type="xs:string"/>
+								</xs:complexType>
+							</xs:element>
+							<xs:element name="env">
+								<xs:complexType>
+									<xs:attribute name="append" type="boolvalue"/>
+									<xs:attribute name="file" type="xs:string"/>
+									<xs:attribute name="key" type="xs:string"/>
+									<xs:attribute name="value" type="xs:string"/>
+								</xs:complexType>
+							</xs:element>
+							<xs:element name="rip">
+								<xs:complexType>
+									<xs:attribute name="host" type="hosttype"/>
 								</xs:complexType>
 							</xs:element>
 						</xs:choice>

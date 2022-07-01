@@ -264,6 +264,12 @@
 					<xs:attribute name="id" type="xs:string"/>
 				</xs:complexType>
 			</xs:element>
+			<xs:element name="ac-to-mono">
+				<xs:complexType>
+					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+					<xs:attribute name="id" type="xs:string"/>
+				</xs:complexType>
+			</xs:element>
 		</xs:choice>
 	</xs:complexType>
 	<xs:simpleType name="vec2type" final="restriction">
@@ -380,6 +386,9 @@
 					<xs:enumeration value="fs1://map2_2.png"/>
 					<xs:enumeration value="fs1://map2_4.png"/>
 					<xs:enumeration value="fs1://map2_24.png"/>
+					<xs:enumeration value="leot://characters_darkelf_change_pivot.blend1"/>
+					<xs:enumeration value="leot://char_darkelf.blend"/>
+					<xs:enumeration value="leot://characters_darkelf_change_pivot.blend"/>
 					<xs:enumeration value="leot://gameassets.blend1"/>
 					<xs:enumeration value="leot://untitled.blend"/>
 					<xs:enumeration value="leot://polygon_objects_static.blend"/>
@@ -388,14 +397,21 @@
 					<xs:enumeration value="leot://gameassets.blend"/>
 					<xs:enumeration value="leot://untitled.mtl"/>
 					<xs:enumeration value="leot://untitled.obj"/>
+					<xs:enumeration value="leot://de_animation_work.blend"/>
 					<xs:enumeration value="leot://untitled.abc"/>
+					<xs:enumeration value="leot://char_darkelf.blend1"/>
 					<xs:enumeration value="leot://characters.fbx"/>
 					<xs:enumeration value="leot://untitled.blend1"/>
 					<xs:enumeration value="leot://characters.blend"/>
 					<xs:enumeration value="leot://polygon_objects_static.blend1"/>
 					<xs:enumeration value="leot://levels.blend"/>
 					<xs:enumeration value="leot://icons/stone.png"/>
+					<xs:enumeration value="leot://icons/create_settler.png"/>
+					<xs:enumeration value="leot://icons/create_soldier.png"/>
+					<xs:enumeration value="leot://icons/cancel_red.png"/>
 					<xs:enumeration value="leot://icons/wood.png"/>
+					<xs:enumeration value="leot://icons/cancel.png"/>
+					<xs:enumeration value="leot://icons/radius.png"/>
 					<xs:enumeration value="leot://icons/icon_bg.png"/>
 					<xs:enumeration value="leot://icons/icon_bg_selected.png"/>
 					<xs:enumeration value="cwd://activate_venv.sh"/>
@@ -408,6 +424,7 @@
 					<xs:enumeration value="cwd://.gitigonre"/>
 					<xs:enumeration value="cwd://map2_2.png"/>
 					<xs:enumeration value="cwd://requirements.txt"/>
+					<xs:enumeration value="cwd://thepipe_runtime.py"/>
 					<xs:enumeration value="cwd://all.xml"/>
 					<xs:enumeration value="cwd://map2_4.png"/>
 					<xs:enumeration value="cwd://tools.py"/>

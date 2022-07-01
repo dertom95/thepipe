@@ -1,8 +1,19 @@
 <thepipeline>
   /*block:tool*/
     <tool id="/*name:id|required*/img2tim/*endname*/" type="/*name:type|enum:cli,tooltype|required*/cli/*endname*/" target="/*name:target|enum:psx,targettype*/psx/*endname*/">
+    /*block:env*/
+        <env /*name:key*/key/*endname*/=/*name:value*/"value"/*endname*/ file=/*name:file*/"env.sh"/*endname*/ append=/*name:append|enum:boolvalue|enum_strict:boolvalue*/"true"/*endname*/ />
+    /*endblock:env*/    
     /*block:command*/
-        <command host="/*name:host|enum:linux,hosttype*/linux/*endname*/" file="/*name:file*/@/tools/linux/ic/psx/img2tim/*endname*/"  wrapper="/*name:wrapper*/tool-python/*endname*/"/>
+        <command host="/*name:host|enum:linux,hosttype*/linux/*endname*/" file="/*name:file*/@/tools/linux/ic/psx/img2tim/*endname*/"  wrapper="/*name:wrapper*/tool-python/*endname*/">
+      /*block:env*/
+          <env /*name:key*/key/*endname*/=/*name:value*/"value"/*endname*/ file=/*name:file*/"env.sh"/*endname*/ append=/*name:append|enum:boolvalue|enum_strict:boolvalue*/"true"/*endname*/ />
+      /*endblock:env*/
+      /*block:execute*/ 
+          <execute call=/*name:call|required*/"dosomething"/*endname*//>
+      /*endblock:execute*/
+        </command>
+    /*endblock:command*/
     </tool>
     /*block:rip*/    
     <command host="/*name:host|enum:all,hosttype*/all/*endname*/" file="@/tools/linux/ic/psx/img2tim"/>
@@ -11,6 +22,5 @@
     <command host="/*name:host|enum:linux-arm,hosttype*/linux-arm/*endname*/" file="@/tools/linux/ic/psx/img2tim"/>
     /*endblock:rip*/
 
-    /*endblock:command*/
   /*endblock:tool*/    
 </thepipeline>
