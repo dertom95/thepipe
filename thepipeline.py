@@ -12,6 +12,8 @@ from tools import BoolValue, InputFile, MultiFileValue,NumberValue,FileValue,Enu
 XMLNS=None
 XMLR=None
 HOST=None
+HOST_EXPORT=None
+HOST_ENV_SOURCE=None
 ARG_AUTOCOMPLETE_REPOSITORIES=False
 ARG_AUTOCOMPLETE_REPOSITORY_LEVELS=2
 ARG_GENERATE_XSD=False
@@ -23,10 +25,17 @@ INPUT_TYPE_STANDALONE = 2
 
 if platform == "linux" or platform == "linux2":
     HOST="linux"
+    HOST_EXPORT="export"
+    HOST_ENV_SOURCE="source"
 elif platform == "darwin":
     HOST="mac"
+    HOST_EXPORT="export"
+    HOST_ENV_SOURCE="source" #??
 elif platform == "win32":
     HOST="win"
+    HOST_EXPORT="set"
+    HOST_ENV_SOURCE=""
+
 else:
     raise AttributeError("Unknown platform: %s"  %  platform)
 
@@ -96,6 +105,8 @@ class XSDManager:
         self.actions=self.creator.create_block(self.pipeline,"actions","actions_type")
 
         self.actions_type=self.creator.create_type("actions_type")
+        self.creator.add_attribute(self.actions_type,"resetfiles",False,"booltype")
+        self.creator.add_attribute(self.actions_type,"target",False,"targettype")
 
         self.set_input = self.creator.create_block(self.actions_type,"set-input")
         self.creator.add_attribute(self.set_input,"id",True,"ids_enum")
@@ -105,7 +116,7 @@ class XSDManager:
         p_eval=self.creator.create_block(self.actions_type,"eval",None,True)
 
         p_output=self.creator.create_block(self.actions_type,"output")
-        self.creator.add_attribute(p_output,"target")
+        self.creator.add_attribute(p_output,"target",False,"targettype")
         self.creator.add_attribute(p_output,"copy_metafiles")
         self.creator.add_attribute(p_output,"filename",True)
 
@@ -158,6 +169,7 @@ class XSDManager:
         self.creator.create_enum_type("targettype",self.targets)
         self.creator.create_enum_type("files_enum",self.files)
         self.creator.create_enum_type("ids_enum",self.ids)
+        self.creator.create_enum_type("booltype",["true","false"],True)
 
         result=self.creator.to_string()
         #print(result)
@@ -563,22 +575,24 @@ class Tool:
         self.version=xget(xml,"version","unknown")
         self.is_default=xget_b(xml,"default",False)
         self.target=xget(xml,"target","all")
-        self.environment_variables={}
-        self.environment_files={}
+        self.environment_variables=[]
+        self.environment_files=[]
 
-        def parse_env(xml,env_key):
-            env_variables = xml.find("%senv"%XMLNS)
+        def parse_env(xml):
+            env_variables = xml.findall("%senv"%XMLNS)
             if env_variables:
                 for global_env in env_variables:
                     file = xget(global_env,"file")
                     if file:
-                        add_to_listmap(self.environment_files,env_key,file)
+                        file = self.replace_keyword(file)
+                        self.environment_files.append(file)
                     else:
                         key   = xgetrequired(global_env,"key")
                         value = xgetrequired(global_env,"value")
-                        add_to_listmap(self.environment_variables,env_key,(key,value))
+                        value = self.replace_keyword(value)
+                        self.environment_variables.append((key,value))
 
-        parse_env(xml,"global")
+        parse_env(xml)
 
         if ARG_GENERATE_XSD:
             XSDManager.get().add_target(self.target)
@@ -590,18 +604,22 @@ class Tool:
                 # ignore tools for other HOSTs
                 continue
             
-            parse_env(cmd,"global")
+            parse_env(cmd)
 
             self.host = host
             self.wrapper = xget(cmd,"wrapper",None)
 
             if self.tool_type=="cli":
                 file = xgetrequired(cmd,"file")
-                self.command=file.replace("@",self.xml_folder)
+                self.command = self.replace_keyword(file)
                 if not os.path.exists(self.command):
                     raise AttributeError("Could not locate tool:%s at %s" % (self.qualified_name(),self.command))
             else:
                 raise AttributeError("Unknown ToolType:%s" % self.tool_type)
+
+    def replace_keyword(self,input):
+        input=input.replace("@",self.xml_folder)
+        return input
 
     def qualified_name(self):
         return "%s.%s" % (self.tool_id,self.version)
@@ -635,14 +653,27 @@ class Tool:
         tool = Tool(xml)
         Tool.add(tool)
 
-    def execute(self,arguments):
+    def execute(self,arguments,_env_vars=[],_env_files=[]):
+        env_vars  = _env_vars + self.environment_variables
+        env_files = _env_files + self.environment_files
+        
         execution_command = "%s %s" % (self.command,arguments)
         print(execution_command)
 
         if self.wrapper:
             wrapper_tool = Tool.get(self.wrapper)
-            retcode,execution_command = wrapper_tool.execute(execution_command)
+            retcode,execution_command = wrapper_tool.execute(execution_command,env_vars,env_files)
         else:
+            environment_vars = ""
+            
+            for key,value in env_vars:
+                environment_vars += f"{HOST_EXPORT} {key}={value} && "
+            for file in env_files:
+                environment_vars += f"{HOST_ENV_SOURCE} {file} && "
+
+            execution_command = "bash -c \""+environment_vars + execution_command +" \""
+            #execution_command = "bash -c \""+environment_vars +" export -p > exports.out \""
+            
             retcode = os.system(execution_command)
 
         return retcode,execution_command
@@ -1149,70 +1180,75 @@ def greater_equal(a,b):
 
         # resolve file-pattern first
         resolved_input=ElementTree.SubElement(init,"%sinput"%XMLR)
-        self.input_resolver(xml_input,resolved_input)
-        print(ElementTree.tostring)
         command_counter=1
-        for _input in resolved_input:
-            #todo do we want to clear? yes, i guesss
-            files_id_order.clear()
+        metafiles=[]
+        
+        def resolve_input_files():
+            self.input_resolver(xml_input,resolved_input)
+            print(ElementTree.tostring)
+            for _input in resolved_input:
+                #todo do we want to clear? yes, i guesss
+                files_id_order.clear()
 
-            metafiles=[]
-            #execute input-eval
-            if _input.tag=="%seval"%XMLR:
-                ev_str = trim_text(_input.text)
-                exec(ev_str,shared_globals,shared_locals)
-                execution_calls.append("eval start:\n%s\neval end:------" % ev_str)
-                continue       
-
-            input_type,name,input_info,evals,dir_name = input_data = self.retrieve_input(_input)
-            shared_locals["in_repo_folder"]=dir_name
-            if input_type==INPUT_TYPE_SINGLEFILE:
-                id,input=input_info
-                if id:
-                    add_file_id(id,input)
-
-                set_sharedlocals_for_file(input,id,shared_locals)
-                shared_locals["init_repo_name"]=name
-                
-                file_history=[input]
-                execution_calls.append("\nInput-File:%s" %input)
-
-                shared_locals["init_full_filename"]=input
-                
-                filename, file_extension = os.path.splitext(input)
-                file_extension=file_extension[1:]                
-                IDs["orig"]=("orig",input_type,input,file_extension,None)
-
-            elif input_type==INPUT_TYPE_MULTIFILE:
-                input,files_with_id=input_info
-                for id,file in files_with_id:
-                    add_file_id(id,file)
-
-                file_history=[input]
-                shared_locals["init_input_type"]="multi_file"
-                shared_locals["init_mf_name"]=name
-                shared_locals["init_mf_files"]=input
-                current_id_folders=[]
-                for id_folder in files_id_order:
-                    current_id_folders.append((id_folder,files_ids[id_folder]))
-                shared_locals["current_file_folders"]=current_id_folders
-            else:
-                raise AttributeError("Unknown input_type:%s [%s]" % (input_type,ElementTree.tostring(_input)))
-
-            if evals:
-                for eval in evals:
-                    ev_str = trim_text(eval.text)
+                #execute input-eval
+                if _input.tag=="%seval"%XMLR:
+                    ev_str = trim_text(_input.text)
                     exec(ev_str,shared_globals,shared_locals)
                     execution_calls.append("eval start:\n%s\neval end:------" % ev_str)
+                    continue       
 
-            block_data = None
-            pipeline_context = (block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history)
-            
-            # execution command
-            execution_ctx = self.execute_commands(pipeline_context,xml_pipeline,"%sactions"%XMLR)
-            
-            # unfold data from execution
-            # block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,target,pipeline_name,pipeline_folder,file_history=execution_ctx
+                input_type,name,input_info,evals,dir_name = input_data = self.retrieve_input(_input)
+                shared_locals["in_repo_folder"]=dir_name
+                if input_type==INPUT_TYPE_SINGLEFILE:
+                    id,input=input_info
+                    if id:
+                        add_file_id(id,input)
+
+                    set_sharedlocals_for_file(input,id,shared_locals)
+                    shared_locals["init_repo_name"]=name
+                    
+                    file_history=[input]
+                    execution_calls.append("\nInput-File:%s" %input)
+
+                    shared_locals["init_full_filename"]=input
+                    
+                    filename, file_extension = os.path.splitext(input)
+                    file_extension=file_extension[1:]                
+                    IDs["orig"]=("orig",input_type,input,file_extension,None)
+
+                elif input_type==INPUT_TYPE_MULTIFILE:
+                    input,files_with_id=input_info
+                    for id,file in files_with_id:
+                        add_file_id(id,file)
+
+                    file_history=[input]
+                    shared_locals["init_input_type"]="multi_file"
+                    shared_locals["init_mf_name"]=name
+                    shared_locals["init_mf_files"]=input
+                    current_id_folders=[]
+                    for id_folder in files_id_order:
+                        current_id_folders.append((id_folder,files_ids[id_folder]))
+                    shared_locals["current_file_folders"]=current_id_folders
+                else:
+                    raise AttributeError("Unknown input_type:%s [%s]" % (input_type,ElementTree.tostring(_input)))
+
+                if evals:
+                    for eval in evals:
+                        ev_str = trim_text(eval.text)
+                        exec(ev_str,shared_globals,shared_locals)
+                        execution_calls.append("eval start:\n%s\neval end:------" % ev_str)
+                return input,input_type,name,input_info,evals,dir_name,file_history
+
+        input,input_type,name,input_info,evals,dir_name,file_history = resolve_input_files()
+
+        block_data = None
+        pipeline_context = (block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history)
+        
+        # execution command
+        execution_ctx = self.execute_commands(pipeline_context,xml_pipeline,"%sactions"%XMLR)
+        
+        # unfold data from execution
+        # block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,target,pipeline_name,pipeline_folder,file_history=execution_ctx
 
         execution_file = open("%s%s-exe-list.%s.txt" % (pipeline_folder,pipeline_name,time.time()),"w")
         execution_text = "\n".join(execution_calls)        
