@@ -1,8 +1,9 @@
 from opcode import hasconst
 import pytmx
-import math
+import math,sys
 from PIL import Image
 from pathlib import Path
+
 
 map={0:0}
 
@@ -102,6 +103,80 @@ def CreatePSXTilesetImage(data):
             "start" : current_start,
             "end" : current_count
         }
+
+GBA_TILESETMODE_4bpp=0
+GBA_TILESETMODE_8bpp=1
+
+def CreateGBATilesetImage(data,mode=GBA_TILESETMODE_4bpp):
+    global map
+    used_tiles = data[0]
+    used_types = data[1]
+    tilemap_filebase=Path(data[3]).stem
+    amount_tiles = len(used_tiles)
+
+    (filename,rect,flags,image) = used_tiles[1]
+    tileW = rect[2]
+    tileH = rect[3]
+
+    if tileW!=8 or tileH!=8:
+        raise AttributeError("GBA-Tileset only support 8x8-tilesets")
+
+    max_cols = 32
+    max_rows = 16
+
+    if mode == GBA_TILESETMODE_8bpp:
+        max_cols=16
+
+    max_tiles = max_cols*max_rows
+
+    if amount_tiles > max_tiles:
+        raise AttributeError("More than %s tiles not supported,yet!" % max_tiles)
+
+    # cols = (amount_tiles * tileH)/256
+    # rows = math.floor(256/tileH)
+    
+    rows = math.ceil(amount_tiles / max_cols)
+    cols = max_cols
+    if rows == 1:
+        cols = amount_tiles
+
+    img_width  = cols * 8
+
+
+    img_height = rows * 8
+        
+    empty_image = Image.new("RGBA",(img_width,img_height),(0,0,0,255))
+    
+    destXPx=0
+    destYPx=0
+    destX=0
+    destY=0
+    current_start=0
+    current_count=0
+    for _type in used_types:
+        current_start=current_count
+        for tileNr in used_types[_type]:
+#   for tileNr in used_tiles:
+            (filename,(x,y,w,h),flags,image)=used_tiles[tileNr]
+            box = (x,y,x+w,y+w)
+            region = image.crop(box)
+
+            box = (destXPx,destYPx,destXPx+w,destYPx+h)
+            empty_image.paste(region,box) 
+            destX+=1
+            if destX>=max_cols:
+                destX=0
+                destY+=1
+            destXPx=destX*tileW
+            destYPx=destY*tileH
+            current_count+=1
+            map[tileNr]=current_count
+
+        used_types[_type]={
+            "start" : current_start,
+            "end" : current_count
+        }
+
 
     empty_image.save("%s.png" % tilemap_filebase)
 
@@ -239,6 +314,13 @@ def CreatePSXTileMapFile(data):
     data_file.close()
     
 
-data = Parse('tests/data/tiled/map2.tmx')   
-CreatePSXTilesetImage(data) 
+#data = Parse('tests/data/tiled/map2.tmx')
+
+args = sys.argv[1:]
+if len(args)==0:
+    print("You need to specify the path to the tmx-file e.g. gba_map.tmx")
+    sys.exit(1)
+
+data = Parse(args[0])   
+CreateGBATilesetImage(data,GBA_TILESETMODE_8bpp) 
 CreatePSXTileMapFile(data)    

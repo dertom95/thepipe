@@ -95,7 +95,7 @@
 			<xs:element name="output">
 				<xs:complexType>
 					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
-					<xs:attribute name="target" type="xs:string"/>
+					<xs:attribute name="target" type="targettype"/>
 					<xs:attribute name="copy_metafiles" type="xs:string"/>
 					<xs:attribute name="filename" type="xs:string" use="required"/>
 				</xs:complexType>
@@ -270,7 +270,33 @@
 					<xs:attribute name="id" type="xs:string"/>
 				</xs:complexType>
 			</xs:element>
+			<xs:element name="ac-to-wav">
+				<xs:complexType>
+					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+					<xs:attribute name="id" type="xs:string"/>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="ac-dos-to-wav">
+				<xs:complexType>
+					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+					<xs:attribute name="id" type="xs:string"/>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="ac-amiga-to-sfx">
+				<xs:complexType>
+					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+					<xs:attribute name="id" type="xs:string"/>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="ac-atari-to-sfx">
+				<xs:complexType>
+					<xs:choice minOccurs="0" maxOccurs="unbounded"/>
+					<xs:attribute name="id" type="xs:string"/>
+				</xs:complexType>
+			</xs:element>
 		</xs:choice>
+		<xs:attribute name="resetfiles" type="booltype"/>
+		<xs:attribute name="target" type="targettype"/>
 	</xs:complexType>
 	<xs:simpleType name="vec2type" final="restriction">
 		<xs:union>
@@ -371,6 +397,9 @@
 					<xs:enumeration value="6502"/>
 					<xs:enumeration value="linux"/>
 					<xs:enumeration value="psx"/>
+					<xs:enumeration value="dos"/>
+					<xs:enumeration value="amiga"/>
+					<xs:enumeration value="atari"/>
 				</xs:restriction>
 			</xs:simpleType>
 		</xs:union>
@@ -383,48 +412,160 @@
 			<xs:simpleType>
 				<xs:restriction base="xs:string">
 					<xs:enumeration value="fs1://map2.png"/>
+					<xs:enumeration value="fs1://gba_map.png"/>
 					<xs:enumeration value="fs1://map2_2.png"/>
 					<xs:enumeration value="fs1://map2_4.png"/>
 					<xs:enumeration value="fs1://map2_24.png"/>
-					<xs:enumeration value="leot://characters_darkelf_change_pivot.blend1"/>
-					<xs:enumeration value="leot://char_darkelf.blend"/>
-					<xs:enumeration value="leot://characters_darkelf_change_pivot.blend"/>
-					<xs:enumeration value="leot://gameassets.blend1"/>
-					<xs:enumeration value="leot://untitled.blend"/>
-					<xs:enumeration value="leot://polygon_objects_static.blend"/>
-					<xs:enumeration value="leot://levels.blend1"/>
-					<xs:enumeration value="leot://characters.blend1"/>
-					<xs:enumeration value="leot://gameassets.blend"/>
-					<xs:enumeration value="leot://untitled.mtl"/>
-					<xs:enumeration value="leot://untitled.obj"/>
-					<xs:enumeration value="leot://de_animation_work.blend"/>
-					<xs:enumeration value="leot://untitled.abc"/>
-					<xs:enumeration value="leot://char_darkelf.blend1"/>
-					<xs:enumeration value="leot://characters.fbx"/>
-					<xs:enumeration value="leot://untitled.blend1"/>
-					<xs:enumeration value="leot://characters.blend"/>
-					<xs:enumeration value="leot://polygon_objects_static.blend1"/>
-					<xs:enumeration value="leot://levels.blend"/>
-					<xs:enumeration value="leot://icons/stone.png"/>
-					<xs:enumeration value="leot://icons/create_settler.png"/>
-					<xs:enumeration value="leot://icons/create_soldier.png"/>
-					<xs:enumeration value="leot://icons/cancel_red.png"/>
-					<xs:enumeration value="leot://icons/wood.png"/>
-					<xs:enumeration value="leot://icons/cancel.png"/>
-					<xs:enumeration value="leot://icons/radius.png"/>
-					<xs:enumeration value="leot://icons/icon_bg.png"/>
-					<xs:enumeration value="leot://icons/icon_bg_selected.png"/>
+					<xs:enumeration value="sheep://Dying/Dying_014.png"/>
+					<xs:enumeration value="sheep://Dying/Dying_008.png"/>
+					<xs:enumeration value="sheep://Dying/Dying_005.png"/>
+					<xs:enumeration value="sheep://Dying/Dying_011.png"/>
+					<xs:enumeration value="sheep://Dying/Dying_016.png"/>
+					<xs:enumeration value="sheep://Dying/Dying_017.png"/>
+					<xs:enumeration value="sheep://Dying/Dying_012.png"/>
+					<xs:enumeration value="sheep://Dying/Dying_009.png"/>
+					<xs:enumeration value="sheep://Dying/Dying_003.png"/>
+					<xs:enumeration value="sheep://Dying/Dying_015.png"/>
+					<xs:enumeration value="sheep://Dying/Dying_006.png"/>
+					<xs:enumeration value="sheep://Dying/Dying_007.png"/>
+					<xs:enumeration value="sheep://Dying/Dying_002.png"/>
+					<xs:enumeration value="sheep://Dying/Dying_001.png"/>
+					<xs:enumeration value="sheep://Dying/Dying_013.png"/>
+					<xs:enumeration value="sheep://Dying/Dying_010.png"/>
+					<xs:enumeration value="sheep://Dying/Dying_000.png"/>
+					<xs:enumeration value="sheep://Dying/Dying_004.png"/>
+					<xs:enumeration value="sheep://Jump Start/Jump Start_004.png"/>
+					<xs:enumeration value="sheep://Jump Start/Jump Start_000.png"/>
+					<xs:enumeration value="sheep://Jump Start/Jump Start_001.png"/>
+					<xs:enumeration value="sheep://Jump Start/Jump Start_002.png"/>
+					<xs:enumeration value="sheep://Jump Start/Jump Start_005.png"/>
+					<xs:enumeration value="sheep://Jump Start/Jump Start_003.png"/>
+					<xs:enumeration value="sheep://Running/Running_002.png"/>
+					<xs:enumeration value="sheep://Running/Running_001.png"/>
+					<xs:enumeration value="sheep://Running/Running_009.png"/>
+					<xs:enumeration value="sheep://Running/Running_006.png"/>
+					<xs:enumeration value="sheep://Running/Running_011.png"/>
+					<xs:enumeration value="sheep://Running/Running_007.png"/>
+					<xs:enumeration value="sheep://Running/Running_005.png"/>
+					<xs:enumeration value="sheep://Running/Running_008.png"/>
+					<xs:enumeration value="sheep://Running/Running_010.png"/>
+					<xs:enumeration value="sheep://Running/Running_000.png"/>
+					<xs:enumeration value="sheep://Running/Running_004.png"/>
+					<xs:enumeration value="sheep://Running/Running_003.png"/>
+					<xs:enumeration value="sheep://Idle Blinking/Idle Blinking_009.png"/>
+					<xs:enumeration value="sheep://Idle Blinking/Idle Blinking_000.png"/>
+					<xs:enumeration value="sheep://Idle Blinking/Idle Blinking_007.png"/>
+					<xs:enumeration value="sheep://Idle Blinking/Idle Blinking_010.png"/>
+					<xs:enumeration value="sheep://Idle Blinking/Idle Blinking_006.png"/>
+					<xs:enumeration value="sheep://Idle Blinking/Idle Blinking_004.png"/>
+					<xs:enumeration value="sheep://Idle Blinking/Idle Blinking_002.png"/>
+					<xs:enumeration value="sheep://Idle Blinking/Idle Blinking_001.png"/>
+					<xs:enumeration value="sheep://Idle Blinking/Idle Blinking_005.png"/>
+					<xs:enumeration value="sheep://Idle Blinking/Idle Blinking_011.png"/>
+					<xs:enumeration value="sheep://Idle Blinking/Idle Blinking_003.png"/>
+					<xs:enumeration value="sheep://Idle Blinking/Idle Blinking_008.png"/>
+					<xs:enumeration value="sheep://Fearing/Fearing_003.png"/>
+					<xs:enumeration value="sheep://Fearing/Fearing_002.png"/>
+					<xs:enumeration value="sheep://Fearing/Fearing_001.png"/>
+					<xs:enumeration value="sheep://Fearing/Fearing_005.png"/>
+					<xs:enumeration value="sheep://Fearing/Fearing_004.png"/>
+					<xs:enumeration value="sheep://Fearing/Fearing_000.png"/>
+					<xs:enumeration value="sheep://Jerking/Jerking_004.png"/>
+					<xs:enumeration value="sheep://Jerking/Jerking_005.png"/>
+					<xs:enumeration value="sheep://Jerking/Jerking_002.png"/>
+					<xs:enumeration value="sheep://Jerking/Jerking_007.png"/>
+					<xs:enumeration value="sheep://Jerking/Jerking_009.png"/>
+					<xs:enumeration value="sheep://Jerking/Jerking_001.png"/>
+					<xs:enumeration value="sheep://Jerking/Jerking_010.png"/>
+					<xs:enumeration value="sheep://Jerking/Jerking_006.png"/>
+					<xs:enumeration value="sheep://Jerking/Jerking_000.png"/>
+					<xs:enumeration value="sheep://Jerking/Jerking_003.png"/>
+					<xs:enumeration value="sheep://Jerking/Jerking_011.png"/>
+					<xs:enumeration value="sheep://Jerking/Jerking_008.png"/>
+					<xs:enumeration value="sheep://Hurt/Hurt_009.png"/>
+					<xs:enumeration value="sheep://Hurt/Hurt_008.png"/>
+					<xs:enumeration value="sheep://Hurt/Hurt_006.png"/>
+					<xs:enumeration value="sheep://Hurt/Hurt_011.png"/>
+					<xs:enumeration value="sheep://Hurt/Hurt_010.png"/>
+					<xs:enumeration value="sheep://Hurt/Hurt_001.png"/>
+					<xs:enumeration value="sheep://Hurt/Hurt_005.png"/>
+					<xs:enumeration value="sheep://Hurt/Hurt_007.png"/>
+					<xs:enumeration value="sheep://Hurt/Hurt_003.png"/>
+					<xs:enumeration value="sheep://Hurt/Hurt_000.png"/>
+					<xs:enumeration value="sheep://Hurt/Hurt_002.png"/>
+					<xs:enumeration value="sheep://Hurt/Hurt_004.png"/>
+					<xs:enumeration value="sheep://Eating/Eating_004.png"/>
+					<xs:enumeration value="sheep://Eating/Eating_009.png"/>
+					<xs:enumeration value="sheep://Eating/Eating_000.png"/>
+					<xs:enumeration value="sheep://Eating/Eating_005.png"/>
+					<xs:enumeration value="sheep://Eating/Eating_011.png"/>
+					<xs:enumeration value="sheep://Eating/Eating_008.png"/>
+					<xs:enumeration value="sheep://Eating/Eating_002.png"/>
+					<xs:enumeration value="sheep://Eating/Eating_003.png"/>
+					<xs:enumeration value="sheep://Eating/Eating_007.png"/>
+					<xs:enumeration value="sheep://Eating/Eating_010.png"/>
+					<xs:enumeration value="sheep://Eating/Eating_012.png"/>
+					<xs:enumeration value="sheep://Eating/Eating_001.png"/>
+					<xs:enumeration value="sheep://Eating/Eating_006.png"/>
+					<xs:enumeration value="sheep://Jump Loop/Jump Loop_000.png"/>
+					<xs:enumeration value="sheep://Jump Loop/Jump Loop_003.png"/>
+					<xs:enumeration value="sheep://Jump Loop/Jump Loop_002.png"/>
+					<xs:enumeration value="sheep://Jump Loop/Jump Loop_001.png"/>
+					<xs:enumeration value="sheep://Jump Loop/Jump Loop_004.png"/>
+					<xs:enumeration value="sheep://Jump Loop/Jump Loop_005.png"/>
+					<xs:enumeration value="sheep://Walking/Walking_010.png"/>
+					<xs:enumeration value="sheep://Walking/Walking_004.png"/>
+					<xs:enumeration value="sheep://Walking/Walking_013.png"/>
+					<xs:enumeration value="sheep://Walking/Walking_011.png"/>
+					<xs:enumeration value="sheep://Walking/Walking_001.png"/>
+					<xs:enumeration value="sheep://Walking/Walking_014.png"/>
+					<xs:enumeration value="sheep://Walking/Walking_015.png"/>
+					<xs:enumeration value="sheep://Walking/Walking_007.png"/>
+					<xs:enumeration value="sheep://Walking/Walking_016.png"/>
+					<xs:enumeration value="sheep://Walking/Walking_002.png"/>
+					<xs:enumeration value="sheep://Walking/Walking_012.png"/>
+					<xs:enumeration value="sheep://Walking/Walking_003.png"/>
+					<xs:enumeration value="sheep://Walking/Walking_008.png"/>
+					<xs:enumeration value="sheep://Walking/Walking_005.png"/>
+					<xs:enumeration value="sheep://Walking/Walking_006.png"/>
+					<xs:enumeration value="sheep://Walking/Walking_009.png"/>
+					<xs:enumeration value="sheep://Walking/Walking_000.png"/>
+					<xs:enumeration value="sheep://Walking/Walking_017.png"/>
+					<xs:enumeration value="sheep://Idle/Idle_011.png"/>
+					<xs:enumeration value="sheep://Idle/Idle_010.png"/>
+					<xs:enumeration value="sheep://Idle/Idle_006.png"/>
+					<xs:enumeration value="sheep://Idle/Idle_005.png"/>
+					<xs:enumeration value="sheep://Idle/Idle_007.png"/>
+					<xs:enumeration value="sheep://Idle/Idle_002.png"/>
+					<xs:enumeration value="sheep://Idle/Idle_001.png"/>
+					<xs:enumeration value="sheep://Idle/Idle_003.png"/>
+					<xs:enumeration value="sheep://Idle/Idle_004.png"/>
+					<xs:enumeration value="sheep://Idle/Idle_000.png"/>
+					<xs:enumeration value="sheep://Idle/Idle_008.png"/>
+					<xs:enumeration value="sheep://Idle/Idle_009.png"/>
+					<xs:enumeration value="sheep://Falling Down/Falling Down_004.png"/>
+					<xs:enumeration value="sheep://Falling Down/Falling Down_002.png"/>
+					<xs:enumeration value="sheep://Falling Down/Falling Down_003.png"/>
+					<xs:enumeration value="sheep://Falling Down/Falling Down_005.png"/>
+					<xs:enumeration value="sheep://Falling Down/Falling Down_000.png"/>
+					<xs:enumeration value="sheep://Falling Down/Falling Down_001.png"/>
+					<xs:enumeration value="cwd://all.xml_"/>
 					<xs:enumeration value="cwd://activate_venv.sh"/>
 					<xs:enumeration value="cwd://todo.md"/>
+					<xs:enumeration value="cwd://gba_map.s"/>
 					<xs:enumeration value="cwd://map2.png"/>
 					<xs:enumeration value="cwd://xsd_creator.py"/>
+					<xs:enumeration value="cwd://gba_map.png"/>
 					<xs:enumeration value="cwd://map2.h"/>
 					<xs:enumeration value="cwd://thepipeline.py"/>
 					<xs:enumeration value="cwd://facial_expressions.jpg"/>
+					<xs:enumeration value="cwd://map2.s"/>
 					<xs:enumeration value="cwd://.gitigonre"/>
 					<xs:enumeration value="cwd://map2_2.png"/>
+					<xs:enumeration value="cwd://gba_map.h"/>
 					<xs:enumeration value="cwd://requirements.txt"/>
 					<xs:enumeration value="cwd://thepipe_runtime.py"/>
+					<xs:enumeration value="cwd://test.py"/>
 					<xs:enumeration value="cwd://all.xml"/>
 					<xs:enumeration value="cwd://map2_4.png"/>
 					<xs:enumeration value="cwd://tools.py"/>
@@ -460,7 +601,9 @@
 				<xs:restriction base="xs:string"/>
 			</xs:simpleType>
 			<xs:simpleType>
-				<xs:restriction base="xs:string"/>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="rescaled"/>
+				</xs:restriction>
 			</xs:simpleType>
 		</xs:union>
 	</xs:simpleType>

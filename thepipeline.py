@@ -1185,7 +1185,8 @@ def greater_equal(a,b):
         
         def resolve_input_files():
             self.input_resolver(xml_input,resolved_input)
-            print(ElementTree.tostring)
+            print(ElementTree.tostring(resolved_input))
+            result = []
             for _input in resolved_input:
                 #todo do we want to clear? yes, i guesss
                 files_id_order.clear()
@@ -1215,7 +1216,7 @@ def greater_equal(a,b):
                     filename, file_extension = os.path.splitext(input)
                     file_extension=file_extension[1:]                
                     IDs["orig"]=("orig",input_type,input,file_extension,None)
-
+                    result.append((input,input_type,name,input_info,evals,dir_name,file_history))
                 elif input_type==INPUT_TYPE_MULTIFILE:
                     input,files_with_id=input_info
                     for id,file in files_with_id:
@@ -1229,6 +1230,7 @@ def greater_equal(a,b):
                     for id_folder in files_id_order:
                         current_id_folders.append((id_folder,files_ids[id_folder]))
                     shared_locals["current_file_folders"]=current_id_folders
+                    result.append( (input,input_type,name,input_info,evals,dir_name,file_history) )
                 else:
                     raise AttributeError("Unknown input_type:%s [%s]" % (input_type,ElementTree.tostring(_input)))
 
@@ -1237,26 +1239,32 @@ def greater_equal(a,b):
                         ev_str = trim_text(eval.text)
                         exec(ev_str,shared_globals,shared_locals)
                         execution_calls.append("eval start:\n%s\neval end:------" % ev_str)
-                return input,input_type,name,input_info,evals,dir_name,file_history
+                #TODO check if this return is really at the right position at it will retur at first _input of the loop
+            return result
+            
+        resolve_result_list = resolve_input_files()
+        if not resolve_result_list:
+            return
 
-        input,input_type,name,input_info,evals,dir_name,file_history = resolve_input_files()
+        for resolve_result in resolve_result_list:
+            input,input_type,name,input_info,evals,dir_name,file_history = resolve_result
 
-        block_data = None
-        pipeline_context = (block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history)
-        
-        # execution command
-        execution_ctx = self.execute_commands(pipeline_context,xml_pipeline,"%sactions"%XMLR)
-        
-        # unfold data from execution
-        # block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,target,pipeline_name,pipeline_folder,file_history=execution_ctx
+            block_data = None
+            pipeline_context = (block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history)
+            
+            # execution command
+            execution_ctx = self.execute_commands(pipeline_context,xml_pipeline,"%sactions"%XMLR)
+            
+            # unfold data from execution
+            # block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,target,pipeline_name,pipeline_folder,file_history=execution_ctx
 
-        execution_file = open("%s%s-exe-list.%s.txt" % (pipeline_folder,pipeline_name,time.time()),"w")
-        execution_text = "\n".join(execution_calls)        
-        execution_file.write(execution_text)
-        execution_file.close()
+            execution_file = open("%s%s-exe-list.%s.txt" % (pipeline_folder,pipeline_name,time.time()),"w")
+            execution_text = "\n".join(execution_calls)        
+            execution_file.write(execution_text)
+            execution_file.close()
 
-        if not self.keep_intermediate:
-            shutil.rmtree(pipeline_folder)
+            if not self.keep_intermediate:
+                shutil.rmtree(pipeline_folder)
 
 
     def execute_file(self,filename):
