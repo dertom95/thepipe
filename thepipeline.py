@@ -18,6 +18,7 @@ ARG_AUTOCOMPLETE_REPOSITORIES=False
 ARG_AUTOCOMPLETE_REPOSITORY_LEVELS=2
 ARG_GENERATE_XSD=False
 ARG_TP_XSD_FOLDER=None
+ARG_TARGET="all"
 
 INPUT_TYPE_SINGLEFILE = 0
 INPUT_TYPE_MULTIFILE  = 1
@@ -786,7 +787,7 @@ def set_sharedlocals_for_file(input,id,shared_locals):
 
 class Context:
     def __init__(self,args):
-        global ARG_AUTOCOMPLETE_REPOSITORIES,ARG_AUTOCOMPLETE_REPOSITORY_LEVELS,ARG_GENERATE_XSD,ARG_TP_XSD_FOLDER
+        global ARG_AUTOCOMPLETE_REPOSITORIES,ARG_AUTOCOMPLETE_REPOSITORY_LEVELS,ARG_GENERATE_XSD,ARG_TP_XSD_FOLDER,ARG_TARGET
 
         self.input_files = args.input
         self.keep_intermediate = args.keep_intermediate_files
@@ -794,6 +795,7 @@ class Context:
         ARG_AUTOCOMPLETE_REPOSITORY_LEVELS = args.autocomplete_repository_levels
         ARG_GENERATE_XSD = args.generate_xsd
         ARG_TP_XSD_FOLDER = args.export_tp_xsd_to_folder
+        ARG_TARGET = args.target
 
         self.repositories={}
 
@@ -930,7 +932,21 @@ class Context:
 
             old_pipeline_folder=pipeline_folder
 
+            pipeline_target = target
+
             for action in xml.iter(iter_expression):
+                action_target = xget(action,"target",None)
+                if action_target!=None and action_target!="all" and pipeline_target!="all" and action_target!=ARG_TARGET:
+                    continue
+                
+                if pipeline_target!="all" and action_target==None:
+                    # take outer-scoped target if inner-scoptarget not specified
+                    target = pipeline_target
+                else:
+                    target = action_target
+                
+                shared_locals["target"]=target
+
                 for _command in action:
                     command = copy.deepcopy(_command)
                     input_data=(input_type,name,input)
@@ -1148,7 +1164,11 @@ def greater_equal(a,b):
             if file not in files_ids:
                 files_ids[id].append(file)
 
-        target = xget(xml_pipeline,"target","all")
+        target = xget(xml_pipeline,"target",ARG_TARGET)
+        # target = xget(xml_pipeline,"target","all")
+
+        # if target!="all" and target!=ARG_TARGET:
+        #     return
 
         pipeline_name = xgetrequired(xml_pipeline,"pl-name")
 
@@ -1187,6 +1207,7 @@ def greater_equal(a,b):
             self.input_resolver(xml_input,resolved_input)
             print(ElementTree.tostring(resolved_input))
             result = []
+            id = None
             for _input in resolved_input:
                 #todo do we want to clear? yes, i guesss
                 files_id_order.clear()
@@ -1205,18 +1226,13 @@ def greater_equal(a,b):
                     if id:
                         add_file_id(id,input)
 
-                    set_sharedlocals_for_file(input,id,shared_locals)
-                    shared_locals["init_repo_name"]=name
-                    
                     file_history=[input]
                     execution_calls.append("\nInput-File:%s" %input)
-
-                    shared_locals["init_full_filename"]=input
                     
                     filename, file_extension = os.path.splitext(input)
                     file_extension=file_extension[1:]                
                     IDs["orig"]=("orig",input_type,input,file_extension,None)
-                    result.append((input,input_type,name,input_info,evals,dir_name,file_history))
+                    result.append((input,input_type,name,input_info,evals,dir_name,file_history,id))
                 elif input_type==INPUT_TYPE_MULTIFILE:
                     input,files_with_id=input_info
                     for id,file in files_with_id:
@@ -1230,7 +1246,7 @@ def greater_equal(a,b):
                     for id_folder in files_id_order:
                         current_id_folders.append((id_folder,files_ids[id_folder]))
                     shared_locals["current_file_folders"]=current_id_folders
-                    result.append( (input,input_type,name,input_info,evals,dir_name,file_history) )
+                    result.append( (input,input_type,name,input_info,evals,dir_name,file_history,id) )
                 else:
                     raise AttributeError("Unknown input_type:%s [%s]" % (input_type,ElementTree.tostring(_input)))
 
@@ -1241,13 +1257,17 @@ def greater_equal(a,b):
                         execution_calls.append("eval start:\n%s\neval end:------" % ev_str)
                 #TODO check if this return is really at the right position at it will retur at first _input of the loop
             return result
-            
+
         resolve_result_list = resolve_input_files()
         if not resolve_result_list:
             return
 
         for resolve_result in resolve_result_list:
-            input,input_type,name,input_info,evals,dir_name,file_history = resolve_result
+            input,input_type,name,input_info,evals,dir_name,file_history,id = resolve_result
+            set_sharedlocals_for_file(input,id,shared_locals)
+            shared_locals["init_full_filename"]=input
+            shared_locals["init_repo_name"]=name
+
 
             block_data = None
             pipeline_context = (block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history)
@@ -1333,6 +1353,7 @@ def parse_arguments():
     parser.add_argument("--xsd-output-filename",default="plugins/tpruntime.xsd",help="output folder of the runtime xsd (default: plugins/tpruntime.xsd) ")
     parser.add_argument("--export-tp-xsd-to-folder",default=None,help="exports thepipeline-xsd to use for additional plugins in your folder)")
     parser.add_argument("--plugins-folder",action="append",help="search path for plugins folder (default: plugins ) ")
+    parser.add_argument("--target",default="all",help="set target for execution")
     args = parser.parse_args()
 
     ctx = Context(args)
