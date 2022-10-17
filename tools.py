@@ -4,8 +4,9 @@ from pkg_resources import add_activation_listener
 from xsd_creator import XSDCreator
 
 class InputFile:
-    def __init__(self,context,relative_part,repo):
+    def __init__(self,context,relative_part,repo,target):
         self.context=context
+        self.target=target
         self.repo=repo
         self.relative_part=relative_part.replace("%s://"%repo,"")
 
@@ -98,6 +99,7 @@ class FileValue:
         self.is_set=False
         self.value=None
         self.required=required
+        self.from_repo=None
 
     def set(self,value):
         self.is_set=True

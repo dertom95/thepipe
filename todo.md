@@ -18,3 +18,7 @@
 * repositories: support blender-files to address datablocks
 * blender => render
   * create a support addon that can handle all the scripts for better development
+
+
+
+* converters: make sure that converters with same QN have the same signature

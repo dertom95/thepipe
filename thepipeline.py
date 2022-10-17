@@ -67,6 +67,7 @@ class XSDManager:
         self.targets=[]
         self.files=[]
         self.ids=[]
+        self.converter_qns=[]
 
         self.creator=XSDCreator("tp-runtime")      
 
@@ -93,6 +94,7 @@ class XSDManager:
         file_type=self.creator.create_type("file_type")
         self.creator.add_attribute(file_type,"filename",True,"files_enum" if ARG_AUTOCOMPLETE_REPOSITORIES else "xs:string")
         self.creator.add_attribute(file_type,"id")
+        self.creator.add_attribute(file_type,"target")
 
         pi_input=self.creator.create_block(p_init,"input")
         pii_file=self.creator.create_block(pi_input,"file","file_type")
@@ -119,7 +121,8 @@ class XSDManager:
         p_output=self.creator.create_block(self.actions_type,"output")
         self.creator.add_attribute(p_output,"target",False,"targettype")
         self.creator.add_attribute(p_output,"copy_metafiles")
-        self.creator.add_attribute(p_output,"filename",True)
+        #self.creator.add_attribute(p_output,"filename",True)
+        self.creator.add_attribute(p_output,"filename",True,"files_enum" if ARG_AUTOCOMPLETE_REPOSITORIES else "xs:string")        
 
         p_multifile_create = self.creator.create_block(self.actions_type,"multifile-create")
         self.creator.add_attribute(p_multifile_create,"id")
@@ -156,15 +159,24 @@ class XSDManager:
     def add_id(self,id):
         if id not in self.ids:
             self.ids.append(id)
+            self.files.append("id://%s"%id)
 
     def add_converter(self,converter):
-        xsdconverter=self.creator.create_block(self.actions_type,converter.qualified_name())
-        for (id,output,tool_type,type_signature,description,expose) in converter.params.values():
-            if not expose:
-                continue
-            # if id=="in" or id=="out":
-            #     continue
-            tool_type.put_xsd(self.creator,xsdconverter,converter.qualified_name(),id)
+        qn_without_target = converter.qualified_name(False)
+        add_qn_without_target =  qn_without_target not in self.converter_qns
+
+        def add_converter_internal(name):
+            xsdconverter=self.creator.create_block(self.actions_type,name)
+            for (id,output,tool_type,type_signature,description,expose) in converter.params.values():
+                if not expose:
+                    continue
+                tool_type.put_xsd(self.creator,xsdconverter,name,id)
+        
+        add_converter_internal(converter.qualified_name())
+        if add_qn_without_target:
+            add_converter_internal(qn_without_target)
+            self.converter_qns.append(qn_without_target)
+
 
     def xsdcreator_write(self,filename):
         self.creator.create_enum_type("targettype",self.targets)
@@ -299,6 +311,9 @@ def create_type(type_signature,default_value,required,xml_param):
 
 def walklevel(some_dir, level=1):
     some_dir = some_dir.rstrip(os.path.sep)
+    if not os.path.exists(some_dir):
+        return
+
     assert os.path.isdir(some_dir)
     num_sep = some_dir.count(os.path.sep)
     for root, dirs, files in os.walk(some_dir):
@@ -337,8 +352,11 @@ class Converter:
         if ARG_GENERATE_XSD:
             XSDManager.get().add_converter(self)
     
-    def qualified_name(self):
-        return "%s-%s" % (self.prefix,self.name)
+    def qualified_name(self,add_target=True):
+        if add_target:
+            return "%s-%s-%s" % (self.prefix,self.name,self.target)
+        else:
+            return "%s-%s" % (self.prefix,self.name)
 
     def add(converter):
         qn = converter.qualified_name()
@@ -396,11 +414,11 @@ class Converter:
                         for mf in _metafiles.split(','):
                             if mf not in output_metafiles:
                                 output_metafiles.append(mf) 
-                
+
                 return output_id,name,output_result,INPUT_TYPE_MULTIFILE,output_files,file_extension,output_metafiles
 
             tool_type.set(input)
-
+            
             id,output,tool_type,type_signature,description,expose=self.params["out"]
             output_tool_type = tool_type
 
@@ -512,12 +530,23 @@ class Converter:
             direct_tag = r"@[%s]"%id
             output=replace_special_characters(output)
 
-            if type(tool_type)==FileValue and "://" in tool_type.get():
-                file_name = tool_type.get()
-                file_name = context.resolve_file(file_name,False)
-                tool_type.set(file_name)                
-
-            param_output = tool_type.output(output)
+            param_output = None
+            if type(tool_type)==FileValue:
+                use_win_path = tool.use_win_path()
+                if "://" in tool_type.get():
+                    file_name = tool_type.get()
+                    file_name = context.resolve_file(file_name,False)
+                    tool_type.set(file_name)                
+                
+                param_output = tool_type.output(output)
+                if use_win_path:
+                    param_output = param_output.replace('\'','')
+                    if not param_output.startswith("/"):
+                        param_output = os.path.abspath(param_output)
+                    param_output = "z:"+(param_output.replace("/","\\\\"))
+#                    param_output = "z:"+(param_output.replace("/","\\"))
+            else:
+                param_output = tool_type.output(output)
 
             if direct_tag in arguments:
                 arguments=arguments.replace(direct_tag,param_output)
@@ -546,9 +575,12 @@ class Converter:
         
 
     
-    def get(qn):
+    def get(_qn,target):
+        qn = "%s-%s" % (_qn,target)
         if qn not in Converter.CONVERTERS:
-            return None
+            qn = "%s-%s" % (_qn,"all")
+            if qn not in Converter.CONVERTERS:
+                return None
             #raise KeyError("there is no converter with the qn:%s" % qn)
 
         return Converter.CONVERTERS[qn]
@@ -654,6 +686,10 @@ class Tool:
         tool = Tool(xml)
         Tool.add(tool)
 
+    def use_win_path(self):
+        # todo: this is a bit unflexible but for now
+        return self.wrapper=="wine"
+
     def execute(self,arguments,_env_vars=[],_env_files=[]):
         env_vars  = _env_vars + self.environment_variables
         env_files = _env_files + self.environment_files
@@ -672,7 +708,10 @@ class Tool:
             for file in env_files:
                 environment_vars += f"{HOST_ENV_SOURCE} {file} && "
 
-            execution_command = "bash -c \""+environment_vars + execution_command +" \""
+            exe = environment_vars + execution_command
+            #execution_command = "bash -c \""+exe +" \""
+            execution_command = exe
+            print(execution_command)
             #execution_command = "bash -c \""+environment_vars +" export -p > exports.out \""
             
             retcode = os.system(execution_command)
@@ -798,20 +837,22 @@ class Context:
         ARG_TARGET = args.target
 
         self.repositories={}
+        self.allIDs={}
 
     def input_resolver(self,input_xml,output_xml):
         for ie in input_xml:
             if ie.tag=="%sfile"%XMLR:
                 filename = xgetrequired(ie,"filename")
                 _id = xget(ie,"id",None)
+                _target = xget(ie,"target","all")
                 repo_name,all,relative = FileRepository.get_repo_from_file(filename)
                 
-                input_files = InputFile(self,filename,repo_name).retrieve(True)
+                input_files = InputFile(self,filename,repo_name,_target).retrieve(True)
                 for input_file in input_files:
                     if _id:
-                        xml_file = ElementTree.SubElement(output_xml,"%sfile"%XMLR,filename=input_file,id=_id)
+                        xml_file = ElementTree.SubElement(output_xml,"%sfile"%XMLR,filename=input_file,id=_id,target=_target)
                     else:
-                        xml_file = ElementTree.SubElement(output_xml,"%sfile"%XMLR,filename=input_file)
+                        xml_file = ElementTree.SubElement(output_xml,"%sfile"%XMLR,filename=input_file,target=_target)
 
             elif ie.tag=="%smultifile"%XMLR:
                 mf_name = xgetrequired(ie,"name")
@@ -853,10 +894,11 @@ class Context:
         if tag=="file":
             filename = xgetrequired(xml_input,"filename")
             id = xget(xml_input,"id",None)
+            target = xget(xml_input,"target","all")
             repo_name,all,relative = FileRepository.get_repo_from_file(filename)
             dir_name = os.path.dirname(relative)
-            input_file = InputFile(self,filename,repo_name).retrieve()
-            return (INPUT_TYPE_SINGLEFILE,repo_name,(id,input_file),None,dir_name)
+            input_file = InputFile(self,filename,repo_name,target).retrieve()
+            return (INPUT_TYPE_SINGLEFILE,repo_name,(id,input_file,target),None,dir_name)
         elif tag=="multifile":
             evals=[]
             print("XML:%s" % ElementTree.tostring(xml_input))
@@ -874,12 +916,14 @@ class Context:
                 
                 filename = xgetrequired(xml_file,"filename")
                 id = xget(xml_file,"id",None)
+                target = xget(xml_file,"target","all")
+
                 repo_name,all,relative = FileRepository.get_repo_from_file(filename)
-                input_file = InputFile(self,filename,repo_name).retrieve()
+                input_file = InputFile(self,filename,repo_name,target).retrieve()
                 result.append((repo_name,input_file))
                 if id:
                     result_with_id.append((id,input_file))
-            return (INPUT_TYPE_MULTIFILE,multifile_name,(result,result_with_id),evals,"")
+            return (INPUT_TYPE_MULTIFILE,multifile_name,(result,result_with_id,target),evals,"")
         else:
             raise AttributeError("Unknown input-type:%s" % tag)
 
@@ -909,220 +953,243 @@ class Context:
 
     def resolve_file(self,filename,check_existance):
         repo_name,all,relative = FileRepository.get_repo_from_file(filename)
-        repo = self.get_repository(repo_name)
-        result = repo.get_file(relative,check_existance)
-        return result
+        if repo_name=="id":
+            (id,input_type,input,file_extension,_metafiles) = self.allIDs[relative]
+            return input
+        else:                    
+            repo = self.get_repository(repo_name)
+            result = repo.get_file(relative,check_existance)
+            return result
 
     def check_condition(shared_locals,condition):
         result = eval(condition,shared_locals)
         return result
 
     def execute_commands(self,ctx,xml,iter_expression):
-            block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history=ctx
-            # execute pipeline for every input
-            first_iteration=True
-
-            # TODO: do the block need this information?
-            if block_data:
-                # TODO: this data is not used.... remove soon?
-                if block_data[0]=="loop":
-                    type,loop_init,loop_condition,loop_step=block_data
-                elif block_data[0]=="if":
-                    pass
-
-            old_pipeline_folder=pipeline_folder
-
-            pipeline_target = target
-
             for action in xml.iter(iter_expression):
-                action_target = xget(action,"target",None)
-                if action_target!=None and action_target!="all" and pipeline_target!="all" and action_target!=ARG_TARGET:
-                    continue
+                block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history,file_target=ctx
+                # execute pipeline for every input
+                first_iteration=True
+
+                # TODO: do the block need this information?
+                if block_data:
+                    # TODO: this data is not used.... remove soon?
+                    if block_data[0]=="loop":
+                        type,loop_init,loop_condition,loop_step=block_data
+                    elif block_data[0]=="if":
+                        pass
+
+                old_pipeline_folder=pipeline_folder
+
+                pipeline_target = target                
+                _action_target = xget(action,"target",None)
                 
-                if pipeline_target!="all" and action_target==None:
-                    # take outer-scoped target if inner-scoptarget not specified
-                    target = pipeline_target
-                else:
-                    target = action_target
+                try:
+                    targets = _action_target.split('|')
+                except:
+                    targets = ["all"]
                 
-                shared_locals["target"]=target
+                found_target_action = False
 
-                for _command in action:
-                    command = copy.deepcopy(_command)
-                    input_data=(input_type,name,input)
-                    if input_type==INPUT_TYPE_SINGLEFILE:
-                        shared_locals["full_filename"]=input
-                        in_file = os.path.basename(input)
-                        filename_wo_ext, file_extension = os.path.splitext(in_file)
-                        file_extension=file_extension[1:]
-                        shared_locals["filename"]=in_file
-                        shared_locals["file_wo_ext"]=filename_wo_ext
-                        shared_locals["file_ext"]=file_extension
-                    else:
-                        shared_locals["input_type"]="multi_file"
-                        shared_locals["mf_name"]=name
-                        shared_locals["mf_files"]=input
+                for action_target in targets:
+                    block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history,file_target=ctx
 
-
-                    tag = command.tag.lower().replace(XMLR,"")
-                    if tag=="init":
+                    if action_target!=None and action_target!="all" and pipeline_target!="all" and action_target!=ARG_TARGET:
                         continue
 
-                    ## CONVERTER ##
-                    converter = Converter.get(tag)
-                    if converter:
-                        self.resolve_attribute_variables(command,shared_locals)
-                        id,name,result,input_type,input,file_extension,_metafiles = converter.execute((self,shared_locals),command_counter,pipeline_folder,input_data,command,file_history,execution_calls)
-                        
-                        if id:
-                            IDs[id]=(id,input_type,input,file_extension,_metafiles)
-                            XSDManager.get().add_id(id)
-                        
-                        if input_type==INPUT_TYPE_SINGLEFILE:
-                            if _metafiles:
-                                _metafiles=self.resolve_variables_in_string(_metafiles,shared_locals)
-                                for mf in _metafiles.split(','):
-                                    if mf not in metafiles:
-                                        metafiles.append(mf)
-                        else:
-                            if _metafiles:
-                                for mf in _metafiles:
-                                    if mf not in metafiles:
-                                        metafiles.append(mf)
-
-                        command_counter+=1
-                        shared_locals["file_ext"]=file_extension
-                        if result!=0:
-                            raise AttributeError("command resulted in error!")
-                    ## PYTHON-EVAL ##
-                    elif tag=="eval":
-                        ev_str = trim_text(command.text)
-                        exec(ev_str,shared_globals,shared_locals)
-                        execution_calls.append("eval start:\n%s\neval end:------" % ev_str)
-                    ## OUTPUT / COPY ##
-                    elif tag=="output":
-                        filename=xgetrequired(command,"filename")
-                        
-                        m = re.match(r"(.+?)://.*",filename)
-                        if m:
-                            name = m.group(1)
-                        else:
-                            raise AttributeError("output-command: no filerepository specified: %s" % filename)
-
-                        target_before=target
-                        target=xget(command,"target",target)
-                        copy_metafiles=xget_b(command,"copy_metafiles",True)
-
-                        shared_locals["target"]=target
-
-                        def write(input,name,filename):
-                            nonlocal shared_locals
-                            filename=self.resolve_variables_in_string(filename,shared_locals)
-
-                            repo = self.get_repository(name)
-                            repo.write_file(input,filename)
-                            if copy_metafiles and metafiles:
-                                folder=os.path.dirname(filename)
-                                for mf in metafiles:
-                                    filename="%s/%s" % (folder,os.path.basename(mf))
-                                    repo.write_file(mf,filename)
-                                    print("Output to %s" %filename)
-                        
-                        if input_type==INPUT_TYPE_SINGLEFILE:
-                            write(input,name,filename)
-                        else:
-                            for _,_input in input:
-                                set_sharedlocals_for_file(_input,None,shared_locals)
-                                write(_input,name,filename)
-
-
-                        execution_calls.append("output:%s => [%s]:%s" % (input,name,filename))
-                        target=target_before
-                        shared_locals["target"]=target   
-                    elif tag=="set-input":
-                        id=xgetrequired(command,"id")
-                        if id not in IDs:
-                            raise KeyError("SetInput: unknown ID:%s" % id)
-                        id,input_type,input,file_extension,_metafiles=IDs[id]
-                        # TODO: not sure about that:
-                        name = id
-                    elif tag=="loop":
-                        init = xget(command,"init",None)
-                        condition = xgetrequired(command,"condition")
-                        step = xget(command,"step",None)
-                        use_loop_folder = xget_b(command,"use_folder",False)
-
-                        loop_data=("loop",init,condition,step)
-
-                        if init:
-                            lines=init.replace(';','\n')
-                            exec(lines,shared_locals)
-                        while Context.check_condition(shared_locals,condition):
-                            if use_loop_folder:
-                                loop_folder = "%sloop.%s/"%(old_pipeline_folder,command_counter)
-                                try:
-                                    os.makedirs(loop_folder)
-                                except:
-                                    pass
-                            else:
-                                loop_folder = old_pipeline_folder
-
-                            loop_ctx = (loop_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,loop_folder,file_history)
-                            output_ctx = self.execute_commands(loop_ctx,command,"%sloop-actions"%XMLR)
-                            #TODO process output? at the moment you need to create output for loops via multifile-create and -add
-                            if step:
-                                lines=step.replace(';','\ņ')
-                                exec(lines,shared_locals)
-                            command_counter+=1
-                    elif tag=="if":
-                        found_valid_condition=False
-                        if_data=("if")
-                        for on_tag in command.iter("%son"%XMLR):
-                            condition=xgetrequired(on_tag,"condition")
-                            if Context.check_condition(shared_locals,condition):
-                                if_ctx = (if_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history)
-                                found_valid_condition=True
-                                output_context =  self.execute_commands(if_ctx,on_tag,"%sif-actions"%XMLR)
-                                if_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history=output_context
-                                break
-
-                        if not found_valid_condition:
-                            else_tag = command.find("%selse"%XMLR)
-                            if else_tag:
-                                if_ctx = (if_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history)
-                                found_valid_condition=True
-                                output_context = self.execute_commands(if_ctx,else_tag,"%sif-actions"%XMLR)
-                                if_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history=output_context
-
-                    elif tag=="multifile-create":
-                        multifile_id = xgetrequired(command,"id")
-                        # TODO: what to do if this already exists?
-                        multifile = MultiFileValue()
-                        # TODO unify this?
-                        multifiles[multifile_id]=multifile
-                        IDs[multifile_id]=(multifile_id,INPUT_TYPE_MULTIFILE,[],file_extension,[])
-                    elif tag=="multifile-add":
-                        multifile_id = xgetrequired(command,"id")
-                        if multifile_id not in multifiles:
-                            raise KeyError("Unknown multifile-id: %s" % multifile_id)
-                        
-                        multifile = multifiles[multifile_id]
-                        # todo: metafiles
-                        mf_id,mf_input_type,mf_input,mf_file_extension,mf_metafiles=IDs[multifile_id]
-                        if input_type==INPUT_TYPE_SINGLEFILE:
-                            multifile.add_file(("cwd",input))
-                            mf_input.append(("cwd",input))
-                            a=0
-                        else:
-                            multifile.add_files(input)
-                            mf_input=mf_input+input
-                            IDs[multifile_id]=(mf_id,mf_input_type,mf_input,mf_file_extension,mf_metafiles)
-
-
+                    if pipeline_target!="all" and action_target==None:
+                        # take outer-scoped target if inner-scoptarget not specified
+                        target = pipeline_target
                     else:
-                        raise AttributeError("Unknown pipeline-command:%s"%tag)
+                        target = action_target
 
-            return (block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,old_pipeline_folder,file_history)
+                    if file_target!="all" and target!=file_target:
+                        continue
+
+                    shared_locals["target"]=target
+
+                    for _command in action:
+                        found_target_action=True
+                        command = copy.deepcopy(_command)
+                        input_data=(input_type,name,input)
+                        if input_type==INPUT_TYPE_SINGLEFILE:
+                            shared_locals["full_filename"]=input
+                            in_file = os.path.basename(input)
+                            filename_wo_ext, file_extension = os.path.splitext(in_file)
+                            file_extension=file_extension[1:]
+                            shared_locals["filename"]=in_file
+                            shared_locals["file_wo_ext"]=filename_wo_ext
+                            shared_locals["file_ext"]=file_extension
+                        else:
+                            shared_locals["input_type"]="multi_file"
+                            shared_locals["mf_name"]=name
+                            shared_locals["mf_files"]=input
+
+
+                        tag = command.tag.lower().replace(XMLR,"")
+                        if tag=="init":
+                            continue
+
+                        ## CONVERTER ##
+                        converter = Converter.get(tag,target)
+                        if converter:
+                            self.resolve_attribute_variables(command,shared_locals)
+                            id,name,result,input_type,input,file_extension,_metafiles = converter.execute((self,shared_locals),command_counter,pipeline_folder,input_data,command,file_history,execution_calls)
+                            
+                            if id:
+                                IDs[id]=(id,input_type,input,file_extension,_metafiles)
+                                self.allIDs[id]=(id,input_type,input,file_extension,_metafiles)
+                                XSDManager.get().add_id(id)
+                            
+                            if input_type==INPUT_TYPE_SINGLEFILE:
+                                if _metafiles:
+                                    _metafiles=self.resolve_variables_in_string(_metafiles,shared_locals)
+                                    for mf in _metafiles.split(','):
+                                        if mf not in metafiles:
+                                            metafiles.append(mf)
+                            else:
+                                if _metafiles:
+                                    for mf in _metafiles:
+                                        if mf not in metafiles:
+                                            metafiles.append(mf)
+
+                            command_counter+=1
+                            shared_locals["file_ext"]=file_extension
+                            if result!=0:
+                                raise AttributeError("command resulted in error!")
+                        ## PYTHON-EVAL ##
+                        elif tag=="eval":
+                            ev_str = trim_text(command.text)
+                            exec(ev_str,shared_globals,shared_locals)
+                            execution_calls.append("eval start:\n%s\neval end:------" % ev_str)
+                        ## OUTPUT / COPY ##
+                        elif tag=="output":
+                            filename=xgetrequired(command,"filename")
+                            
+                            m = re.match(r"(.+?)://.*",filename)
+                            if m:
+                                name = m.group(1)
+                            else:
+                                raise AttributeError("output-command: no filerepository specified: %s" % filename)
+
+                            target_before=target
+                            target=xget(command,"target",target)
+                            copy_metafiles=xget_b(command,"copy_metafiles",True)
+
+                            shared_locals["target"]=target
+
+                            def write(input,name,filename):
+                                nonlocal shared_locals
+                                filename=self.resolve_variables_in_string(filename,shared_locals)
+
+                                repo = self.get_repository(name)
+
+                                folder=os.path.dirname(filename)
+                                
+                                repo.write_file(input,filename)
+                                if copy_metafiles and metafiles:
+                                    for mf in metafiles:
+                                        filename="%s/%s" % (folder,os.path.basename(mf))
+                                        repo.write_file(mf,filename)
+                                        print("Output to %s" %filename)
+                            
+                            if input_type==INPUT_TYPE_SINGLEFILE:
+                                write(input,name,filename)
+                            else:
+                                for _,_input in input:
+                                    set_sharedlocals_for_file(_input,None,shared_locals)
+                                    write(_input,name,filename)
+
+
+                            execution_calls.append("output:%s => [%s]:%s" % (input,name,filename))
+                            target=target_before
+                            shared_locals["target"]=target   
+                        elif tag=="set-input":
+                            id=xgetrequired(command,"id")
+                            if id not in IDs:
+                                raise KeyError("SetInput: unknown ID:%s" % id)
+                            id,input_type,input,file_extension,_metafiles=IDs[id]
+                            # TODO: not sure about that:
+                            name = id
+                        elif tag=="loop":
+                            init = xget(command,"init",None)
+                            condition = xgetrequired(command,"condition")
+                            step = xget(command,"step",None)
+                            use_loop_folder = xget_b(command,"use_folder",False)
+
+                            loop_data=("loop",init,condition,step)
+
+                            if init:
+                                lines=init.replace(';','\n')
+                                exec(lines,shared_locals)
+                            while Context.check_condition(shared_locals,condition):
+                                if use_loop_folder:
+                                    loop_folder = "%sloop.%s/"%(old_pipeline_folder,command_counter)
+                                    try:
+                                        os.makedirs(loop_folder)
+                                    except:
+                                        pass
+                                else:
+                                    loop_folder = old_pipeline_folder
+
+                                loop_ctx = (loop_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,loop_folder,file_history,file_target)
+                                output_ctx = self.execute_commands(loop_ctx,command,"%sloop-actions"%XMLR)
+                                #TODO process output? at the moment you need to create output for loops via multifile-create and -add
+                                if step:
+                                    lines=step.replace(';','\ņ')
+                                    exec(lines,shared_locals)
+                                command_counter+=1
+                        elif tag=="if":
+                            found_valid_condition=False
+                            if_data=("if")
+                            for on_tag in command.iter("%son"%XMLR):
+                                condition=xgetrequired(on_tag,"condition")
+                                if Context.check_condition(shared_locals,condition):
+                                    if_ctx = (if_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history,file_target)
+                                    found_valid_condition=True
+                                    output_context =  self.execute_commands(if_ctx,on_tag,"%sif-actions"%XMLR)
+                                    if_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history,file_target=output_context
+                                    break
+
+                            if not found_valid_condition:
+                                else_tag = command.find("%selse"%XMLR)
+                                if else_tag:
+                                    if_ctx = (if_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history,file_target)
+                                    found_valid_condition=True
+                                    output_context = self.execute_commands(if_ctx,else_tag,"%sif-actions"%XMLR)
+                                    if_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history,file_target=output_context
+
+                        elif tag=="multifile-create":
+                            multifile_id = xgetrequired(command,"id")
+                            # TODO: what to do if this already exists?
+                            multifile = MultiFileValue()
+                            # TODO unify this?
+                            multifiles[multifile_id]=multifile
+                            IDs[multifile_id]=(multifile_id,INPUT_TYPE_MULTIFILE,[],file_extension,[])
+                        elif tag=="multifile-add":
+                            multifile_id = xgetrequired(command,"id")
+                            if multifile_id not in multifiles:
+                                raise KeyError("Unknown multifile-id: %s" % multifile_id)
+                            
+                            multifile = multifiles[multifile_id]
+                            # todo: metafiles
+                            mf_id,mf_input_type,mf_input,mf_file_extension,mf_metafiles=IDs[multifile_id]
+                            if input_type==INPUT_TYPE_SINGLEFILE:
+                                multifile.add_file(("cwd",input))
+                                mf_input.append(("cwd",input))
+                                a=0
+                            else:
+                                multifile.add_files(input)
+                                mf_input=mf_input+input
+                                IDs[multifile_id]=(mf_id,mf_input_type,mf_input,mf_file_extension,mf_metafiles)
+
+
+                        else:
+                            raise AttributeError("Unknown pipeline-command:%s"%tag)
+            if found_target_action:
+                return (block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,old_pipeline_folder,file_history,file_target)
+            else:
+                return None
     
 
     def init_funcs(self,shared_data):  
@@ -1222,7 +1289,7 @@ def greater_equal(a,b):
                 input_type,name,input_info,evals,dir_name = input_data = self.retrieve_input(_input)
                 shared_locals["in_repo_folder"]=dir_name
                 if input_type==INPUT_TYPE_SINGLEFILE:
-                    id,input=input_info
+                    id,input,target=input_info
                     if id:
                         add_file_id(id,input)
 
@@ -1232,7 +1299,7 @@ def greater_equal(a,b):
                     filename, file_extension = os.path.splitext(input)
                     file_extension=file_extension[1:]                
                     IDs["orig"]=("orig",input_type,input,file_extension,None)
-                    result.append((input,input_type,name,input_info,evals,dir_name,file_history,id))
+                    result.append((input,input_type,name,input_info,evals,dir_name,file_history,id,target))
                 elif input_type==INPUT_TYPE_MULTIFILE:
                     input,files_with_id=input_info
                     for id,file in files_with_id:
@@ -1246,7 +1313,7 @@ def greater_equal(a,b):
                     for id_folder in files_id_order:
                         current_id_folders.append((id_folder,files_ids[id_folder]))
                     shared_locals["current_file_folders"]=current_id_folders
-                    result.append( (input,input_type,name,input_info,evals,dir_name,file_history,id) )
+                    result.append( (input,input_type,name,input_info,evals,dir_name,file_history,id,target) )
                 else:
                     raise AttributeError("Unknown input_type:%s [%s]" % (input_type,ElementTree.tostring(_input)))
 
@@ -1263,18 +1330,20 @@ def greater_equal(a,b):
             return
 
         for resolve_result in resolve_result_list:
-            input,input_type,name,input_info,evals,dir_name,file_history,id = resolve_result
+            input,input_type,name,input_info,evals,dir_name,file_history,id,file_target = resolve_result
+
             set_sharedlocals_for_file(input,id,shared_locals)
             shared_locals["init_full_filename"]=input
             shared_locals["init_repo_name"]=name
 
 
             block_data = None
-            pipeline_context = (block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history)
+            pipeline_context = (block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history,file_target)
             
             # execution command
             execution_ctx = self.execute_commands(pipeline_context,xml_pipeline,"%sactions"%XMLR)
-            
+            if not execution_ctx:
+                continue
             # unfold data from execution
             # block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,target,pipeline_name,pipeline_folder,file_history=execution_ctx
 
