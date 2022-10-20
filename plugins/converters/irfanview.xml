@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<thepipeline  xmlns="https://thepipeline.com" xsi:schemaLocation="https://thepipeline.com ../xsd/thepipeline.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <tool id="irfanview" type="cli">
+        <command host="win" file="@/../../tools/win/IrfanView/i_view64.exe"/>
+        <command host="linux" file="@/../../tools/win/IrfanView/i_view64.exe" wrapper="wine"/>
+    </tool>
+    <!-- $(PIPECMD) /opt/tools/wine.sh /opt/tools/win_host/IrfanView/i_view64.exe $(WINE_ASSETS)\\palette\\AMIGA.bmp /export_pal=$(WINE_ASSETS)\\palette\\AMIGA.pal  /killmesoftly -->
+    <converter name="createpalette" prefix="ic">
+        <parameters>
+            <param id="in" output="@" type="file" />
+            <param id="out" output="@" type="file" />
+        </parameters>
+        <command arguments="@[in] /export_pal=@[out]  /killmesoftly" toolid="irfanview" extension="pal"/>
+    </converter>
+
+    <converter name="applypalette" prefix="ic">
+        <parameters>
+            <param id="in" output="@" type="file" />
+            <param id="palette" output="@" type="file" />
+            <param id="out" output="@" type="file" />
+        </parameters>
+        <command arguments="@[in] /import_pal=@[palette] /convert=@[out]  /killmesoftly" toolid="irfanview"/>
+    </converter>
+
+    <!-- <converter name="to-sfx" prefix="ac-atari" target="atari">
+        <parameters>
+            <param id="in" output="@"  type="file" />
+            <param id="out" output="@" type="file"/>            
+        </parameters>
+        <command arguments="@[in] -r 2760 -c 1 -t u8 -D @[out]" toolid="sox" extension="sfx"/>
+    </converter>     -->
+</thepipeline>

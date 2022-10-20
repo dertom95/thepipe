@@ -120,6 +120,7 @@ class XSDManager:
 
         p_output=self.creator.create_block(self.actions_type,"output")
         self.creator.add_attribute(p_output,"target",False,"targettype")
+        self.creator.add_attribute(p_output,"use_file",False,"booltype")
         self.creator.add_attribute(p_output,"copy_metafiles")
         #self.creator.add_attribute(p_output,"filename",True)
         self.creator.add_attribute(p_output,"filename",True,"files_enum" if ARG_AUTOCOMPLETE_REPOSITORIES else "xs:string")        
@@ -596,6 +597,7 @@ def add_to_listmap(map,key,value):
 
 class Tool:
     TOOLS={}
+    EXE_COUNT=0
 
     def __init__(self,xml):
         global XMLNS
@@ -695,7 +697,6 @@ class Tool:
         env_files = _env_files + self.environment_files
         
         execution_command = "%s %s" % (self.command,arguments)
-        print(execution_command)
 
         if self.wrapper:
             wrapper_tool = Tool.get(self.wrapper)
@@ -711,7 +712,7 @@ class Tool:
             exe = environment_vars + execution_command
             #execution_command = "bash -c \""+exe +" \""
             execution_command = exe
-            print(execution_command)
+            print("exe:%s" % execution_command)
             #execution_command = "bash -c \""+environment_vars +" export -p > exports.out \""
             
             retcode = os.system(execution_command)
@@ -965,8 +966,19 @@ class Context:
         result = eval(condition,shared_locals)
         return result
 
+    def set_shared_single_file_locals(self,shared_locals,input):
+        shared_locals["full_filename"]=input
+        in_file = os.path.basename(input)
+        filename_wo_ext, file_extension = os.path.splitext(in_file)
+        file_extension=file_extension[1:]
+        shared_locals["filename"]=in_file
+        shared_locals["file_wo_ext"]=filename_wo_ext
+        shared_locals["file_ext"]=file_extension
+
     def execute_commands(self,ctx,xml,iter_expression):
+            found_action = False
             for action in xml.iter(iter_expression):
+                found_action = True
                 block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,pipeline_folder,file_history,file_target=ctx
                 # execute pipeline for every input
                 first_iteration=True
@@ -997,7 +1009,7 @@ class Context:
                     if action_target!=None and action_target!="all" and pipeline_target!="all" and action_target!=ARG_TARGET:
                         continue
 
-                    if pipeline_target!="all" and action_target==None:
+                    if pipeline_target!="all" and _action_target==None:
                         # take outer-scoped target if inner-scoptarget not specified
                         target = pipeline_target
                     else:
@@ -1013,13 +1025,7 @@ class Context:
                         command = copy.deepcopy(_command)
                         input_data=(input_type,name,input)
                         if input_type==INPUT_TYPE_SINGLEFILE:
-                            shared_locals["full_filename"]=input
-                            in_file = os.path.basename(input)
-                            filename_wo_ext, file_extension = os.path.splitext(in_file)
-                            file_extension=file_extension[1:]
-                            shared_locals["filename"]=in_file
-                            shared_locals["file_wo_ext"]=filename_wo_ext
-                            shared_locals["file_ext"]=file_extension
+                            self.set_shared_single_file_locals(shared_locals,input)
                         else:
                             shared_locals["input_type"]="multi_file"
                             shared_locals["mf_name"]=name
@@ -1074,6 +1080,9 @@ class Context:
 
                             target_before=target
                             target=xget(command,"target",target)
+                            use_file=xget(command,"use_file",False)
+                            if use_file:
+                                a=0
                             copy_metafiles=xget_b(command,"copy_metafiles",True)
 
                             shared_locals["target"]=target
@@ -1092,14 +1101,21 @@ class Context:
                                         filename="%s/%s" % (folder,os.path.basename(mf))
                                         repo.write_file(mf,filename)
                                         print("Output to %s" %filename)
+
+                                return filename
                             
                             if input_type==INPUT_TYPE_SINGLEFILE:
-                                write(input,name,filename)
+                                resolved_filename = write(input,name,filename)
                             else:
                                 for _,_input in input:
                                     set_sharedlocals_for_file(_input,None,shared_locals)
                                     write(_input,name,filename)
 
+                            if use_file:
+                                repo_name,all,relative = FileRepository.get_repo_from_file(resolved_filename)
+                                repo = self.get_repository(repo_name)
+                                input = repo.get_file(relative)
+                                self.set_shared_single_file_locals(shared_locals,input)                                
 
                             execution_calls.append("output:%s => [%s]:%s" % (input,name,filename))
                             target=target_before
@@ -1186,7 +1202,7 @@ class Context:
 
                         else:
                             raise AttributeError("Unknown pipeline-command:%s"%tag)
-            if found_target_action:
+            if found_action and found_target_action:
                 return (block_data,command_counter,input_type,name,input,metafiles,shared_globals,shared_locals,execution_calls,IDs,multifiles,target,pipeline_name,old_pipeline_folder,file_history,file_target)
             else:
                 return None
@@ -1423,6 +1439,7 @@ def parse_arguments():
     parser.add_argument("--export-tp-xsd-to-folder",default=None,help="exports thepipeline-xsd to use for additional plugins in your folder)")
     parser.add_argument("--plugins-folder",action="append",help="search path for plugins folder (default: plugins ) ")
     parser.add_argument("--target",default="all",help="set target for execution")
+    #parser.add_argument("--pipeline",default="all",help="set specific pipeline to execute")
     args = parser.parse_args()
 
     ctx = Context(args)

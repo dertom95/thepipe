@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<thepipeline  xmlns="https://thepipeline.com" xsi:schemaLocation="https://thepipeline.com ../xsd/thepipeline.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <tool id="grit" type="cli">
+        <command host="linux" file="@/../../tools/linux/gba/grit"/>
+    </tool>
+
+    
+    <!-- $(PIPECMD) /opt/tools/wine.sh /opt/tools/win_host/IrfanView/i_view64.exe $(WINE_ASSETS)\\palette\\AMIGA.bmp /export_pal=$(WINE_ASSETS)\\palette\\AMIGA.pal  /killmesoftly -->
+    <converter name="convert-tiles-256" prefix="ic" target="gba">
+        <parameters>
+            <param id="in" output="@" type="file" />
+            <param id="out" output="@" type="file" />
+        </parameters>
+        <command arguments="@[in] -g -gB8 -gt -o @[out]" toolid="grit" extension="h" metafiles="@[temp_folder]/@[file_wo_ext].s"/>
+    </converter>
+
+
+    <converter name="convert-sprites-16" prefix="ic" target="gba">
+        <parameters>
+            <param id="in" output="@" type="file" />
+            <param id="out" output="@" type="file" />
+            <param id="transparent" output="-gT @" type="string" />
+            <param id="sprite-width" output="-Mw @" type="string" required="true" description="in tilesize 8x8"/>
+            <param id="sprite-height" output="-Mh @" type="string" required="true"  description="in tilesize 8x8"/>
+        </parameters>
+        <command arguments="@[in] -gB4 -p @@ -o @[out]" toolid="grit" extension="h" metafiles="@[temp_folder]/@[file_wo_ext].s"/>
+    </converter>
+
+
+</thepipeline>

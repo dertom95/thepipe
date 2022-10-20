@@ -5,7 +5,7 @@
 * output pipeline options
 * include other pipeline-files
 * pipeline dependencies?
-* multiple commands in converter
+* multiple commands in converter?
 
 
 * specify possible converter-input and output-formats for automatic(?) creation of input-data?
@@ -21,4 +21,5 @@
 
 
 
-* converters: make sure that converters with same QN have the same signature
+* execute specific pipeline
+* pipeline-dependencies 

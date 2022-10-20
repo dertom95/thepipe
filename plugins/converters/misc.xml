@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<thepipeline  xmlns="https://thepipeline.com" xsi:schemaLocation="https://thepipeline.com ../xsd/thepipeline.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <tool id="bin2c" type="cli">
+        <command host="linux" file="@/../../tools/linux/bin2c"/>
+    </tool>
+
+    <!-- $(PIPECMD) /opt/tools/wine.sh /opt/tools/win_host/IrfanView/i_view64.exe $(WINE_ASSETS)\\palette\\AMIGA.bmp /export_pal=$(WINE_ASSETS)\\palette\\AMIGA.pal  /killmesoftly -->
+    <converter name="bin-to-c" prefix="conv">
+        <parameters>
+            <param id="in" output="@" type="file" />
+            <param id="out" output="@" type="file" />
+            <param id="prefix" output="@" type="string"/>
+        </parameters>
+        <command arguments="@[in] @[out] @[file_wo_ext]" toolid="bin2c" extension="h"/>
+    </converter>
+
+</thepipeline>
