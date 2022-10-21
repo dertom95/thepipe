@@ -1,4 +1,4 @@
-<thepipeline xmlns="https://thepipeline.com" xsi:schemaLocation="https://thepipeline.com ./thepipeline.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<thepipeline xmlns="https://thepipeline.com" xsi:schemaLocation="https://thepipeline.com ../xsd/thepipeline.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <tool id="rg-tiled-conversion" type="cli">
         <command host="linux" file="@/../../tools/linux/rg/TilEdConverter" />
     </tool>
@@ -6,9 +6,10 @@
     <converter name="convert-tiled-map" prefix="rg">
         <parameters>
             <param id="in" output="@"  type="file" />
+            <param id="compression" output="-compress" type="bool"/>
             <param id="out" output="@" type="file"/>            
         </parameters>
-        <command arguments="@[in] @[out]" toolid="rg-tiled-conversion" extension="map"/>
+        <command arguments="@[in] @@" toolid="rg-tiled-conversion" extension="map"/>
     </converter>
 
     <converter name="convert-tiled-tileset" prefix="rg">
