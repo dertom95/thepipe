@@ -15,6 +15,7 @@ HOST=None
 HOST_EXPORT=None
 HOST_ENV_SOURCE=None
 ARG_AUTOCOMPLETE_REPOSITORIES=False
+ARG_STOP_ON_ERROR=False
 ARG_AUTOCOMPLETE_REPOSITORY_LEVELS=2
 ARG_GENERATE_XSD=False
 ARG_TP_XSD_FOLDER=None
@@ -685,8 +686,12 @@ class Tool:
     #     return self.commands[HOST]
 
     def add_from_xml(xml):
-        tool = Tool(xml)
-        Tool.add(tool)
+        try:
+            tool = Tool(xml)
+            Tool.add(tool)
+        except Exception as e:
+            if ARG_STOP_ON_ERROR:
+                raise e
 
     def use_win_path(self):
         # todo: this is a bit unflexible but for now
@@ -827,7 +832,7 @@ def set_sharedlocals_for_file(input,id,shared_locals):
 
 class Context:
     def __init__(self,args):
-        global ARG_AUTOCOMPLETE_REPOSITORIES,ARG_AUTOCOMPLETE_REPOSITORY_LEVELS,ARG_GENERATE_XSD,ARG_TP_XSD_FOLDER,ARG_TARGET
+        global ARG_STOP_ON_ERROR,ARG_AUTOCOMPLETE_REPOSITORIES,ARG_AUTOCOMPLETE_REPOSITORY_LEVELS,ARG_GENERATE_XSD,ARG_TP_XSD_FOLDER,ARG_TARGET
 
         self.input_files = args.input
         self.keep_intermediate = args.keep_intermediate_files
@@ -836,6 +841,7 @@ class Context:
         ARG_GENERATE_XSD = args.generate_xsd
         ARG_TP_XSD_FOLDER = args.export_tp_xsd_to_folder
         ARG_TARGET = args.target
+        ARG_STOP_ON_ERROR = args.stop_on_error
 
         self.repositories={}
         self.allIDs={}
@@ -1439,6 +1445,7 @@ def parse_arguments():
     parser.add_argument("--export-tp-xsd-to-folder",default=None,help="exports thepipeline-xsd to use for additional plugins in your folder)")
     parser.add_argument("--plugins-folder",action="append",help="search path for plugins folder (default: plugins ) ")
     parser.add_argument("--target",default="all",help="set target for execution")
+    parser.add_argument("--stop-on-error",type=bool,default=False,help="stop process on error parsing! e.g. tool not found")
     #parser.add_argument("--pipeline",default="all",help="set specific pipeline to execute")
     args = parser.parse_args()
 
