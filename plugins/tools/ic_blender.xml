@@ -1,6 +1,6 @@
 <thepipeline xmlns="https://thepipeline.com" xsi:schemaLocation="https://thepipeline.com ../xsd/thepipeline.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <tool id="blender" type="cli">
-        <command host="linux" file="/hom/ttrocha/blender-git/build_linux/bin/blender"/>
+        <command host="linux" file="/home/ttrocha/blender-git/build_linux/bin/blender"/>
     </tool>
 
     <converter prefix="blender" name="object-txt-output">
