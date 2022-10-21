@@ -3,6 +3,6 @@
         <command host="linux" file="/usr/bin/wine"/>
     </tool>
     <tool id="python" type="cli">
-        <command host="linux" file="/usr/bin/python3.8"/>
+        <command host="linux" file="/usr/bin/python3"/>
     </tool>    
 </thepipeline> 
