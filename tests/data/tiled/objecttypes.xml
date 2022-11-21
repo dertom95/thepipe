@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objecttypes>
  <objecttype name="Animal" color="#a0a0a4">
-  <property name="atype" type="string" default="sheep"/>
+  <property name="atype" type="string" default=""/>
+ </objecttype>
+ <objecttype name="blocking" color="#a0a0a4">
+  <property name="block" type="bool" default="false"/>
+  <property name="die" type="bool" default="false"/>
+ </objecttype>
+ <objecttype name="grass" color="#a0a0a4">
+  <property name="is_grass" type="bool" default="false"/>
+ </objecttype>
+ <objecttype name="path" color="#a40003"/>
+ <objecttype name="Trigger" color="#a0a0a4">
+  <property name="t_active_tilenr" type="bool" default="false"/>
  </objecttype>
 </objecttypes>

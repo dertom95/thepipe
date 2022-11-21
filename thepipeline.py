@@ -1104,9 +1104,9 @@ class Context:
                                 repo.write_file(input,filename)
                                 if copy_metafiles and metafiles:
                                     for mf in metafiles:
-                                        filename="%s/%s" % (folder,os.path.basename(mf))
-                                        repo.write_file(mf,filename)
-                                        print("Output to %s" %filename)
+                                        meta_filename="%s/%s" % (folder,os.path.basename(mf))
+                                        repo.write_file(mf,meta_filename)
+                                        print("Output to %s" %meta_filename)
 
                                 return filename
                             
@@ -1261,6 +1261,8 @@ def greater_equal(a,b):
 
         pipeline_name = xgetrequired(xml_pipeline,"pl-name")
 
+        print("\nEXECUTE PIPELINE:%s target:%s\n\n"%(pipeline_name,target))
+
         pipeline_folder = "temp/%s%s/" % (pipeline_name,time.time())
         try:
             os.makedirs(pipeline_folder)
@@ -1323,7 +1325,7 @@ def greater_equal(a,b):
                     IDs["orig"]=("orig",input_type,input,file_extension,None)
                     result.append((input,input_type,name,input_info,evals,dir_name,file_history,id,target))
                 elif input_type==INPUT_TYPE_MULTIFILE:
-                    input,files_with_id=input_info
+                    input,files_with_id,target=input_info
                     for id,file in files_with_id:
                         add_file_id(id,file)
 
@@ -1354,9 +1356,13 @@ def greater_equal(a,b):
         for resolve_result in resolve_result_list:
             input,input_type,name,input_info,evals,dir_name,file_history,id,file_target = resolve_result
 
-            set_sharedlocals_for_file(input,id,shared_locals)
-            shared_locals["init_full_filename"]=input
-            shared_locals["init_repo_name"]=name
+            if type(input) is str:
+                set_sharedlocals_for_file(input,id,shared_locals)
+                shared_locals["init_full_filename"]=input
+                shared_locals["init_repo_name"]=name
+            else:
+                #multifile
+                pass
 
 
             block_data = None

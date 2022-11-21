@@ -8,7 +8,7 @@
             <param id="in" output="@"  type="file" />
             <param id="compression" output="-compress" type="bool"/>
             <param id="out" output="@" type="file"/>            
-        </parameters>
+        </parameters>   
         <command arguments="@[in] @@" toolid="rg-tiled-conversion" extension="map"/>
     </converter>
 
@@ -19,6 +19,5 @@
         </parameters>
         <command arguments="@[in] -tileset @[out]" toolid="rg-tiled-conversion" extension="ts"/>
     </converter>
-
 
 </thepipeline> 
