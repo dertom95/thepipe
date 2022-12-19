@@ -819,7 +819,7 @@ class FileRepository:
         relative=m.group(2)
         return repo,all,relative
 
-def set_sharedlocals_for_file(input,id,shared_locals):
+def set_sharedlocals_for_file(input,id,shared_locals,dir_name):
     in_file = os.path.basename(input)
     filename_wo_ext, file_extension = os.path.splitext(in_file)
     file_extension=file_extension[1:]
@@ -827,6 +827,7 @@ def set_sharedlocals_for_file(input,id,shared_locals):
     shared_locals["init_file_wo_ext"]=filename_wo_ext
     shared_locals["init_file_ext"]=file_extension
     shared_locals["init_file_id"]=id
+    shared_locals["init_folder"]=dir_name
     shared_locals["init_input_type"]="single_file"
     shared_locals["current_file_folders"]=None
 
@@ -1357,7 +1358,7 @@ def greater_equal(a,b):
             input,input_type,name,input_info,evals,dir_name,file_history,id,file_target = resolve_result
 
             if type(input) is str:
-                set_sharedlocals_for_file(input,id,shared_locals)
+                set_sharedlocals_for_file(input,id,shared_locals,dir_name)
                 shared_locals["init_full_filename"]=input
                 shared_locals["init_repo_name"]=name
             else:
